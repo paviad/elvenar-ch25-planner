@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elvenar Chapter 25 Planner</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+    --success-text: #006300;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --success-text: #0ca30c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 16px 64px;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    font-size: 15px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header { padding: 32px 0 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .sub { color: var(--text-secondary); font-size: 14px; margin: 0; max-width: 62ch; }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0 0 14px; font-weight: 600; }
+  h3 { font-size: 16px; margin: 24px 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+  label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 5px; }
+  .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.35; }
+  input[type=number], select {
+    width: 100%; padding: 8px 10px; font-size: 15px; font-family: inherit;
+    border: 1px solid var(--baseline); border-radius: 7px;
+    background: var(--page); color: var(--text-primary);
+  }
+  input[type=number]:focus, select:focus { outline: 2px solid var(--series-1); outline-offset: 1px; }
+  .check { display: flex; align-items: flex-start; gap: 9px; margin-top: 6px; }
+  .check input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--series-1); }
+  .check label { margin: 0; font-size: 14px; color: var(--text-primary); }
+  .btnrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  button {
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    padding: 11px 20px; border-radius: 8px; border: 1px solid transparent;
+    background: var(--series-1); color: #fff; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--text-secondary); border-color: var(--baseline); font-weight: 500; }
+  button:hover { filter: brightness(1.07); }
+  button.ghost:hover { filter: none; background: var(--page); }
+  .theme-btn { padding: 7px 13px; font-size: 13px; font-weight: 500; background: transparent; color: var(--text-secondary); border-color: var(--baseline); white-space: nowrap; }
+
+  .verdict { display: flex; gap: 13px; align-items: flex-start; padding: 16px 18px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 4px; }
+  .verdict .ico { flex: 0 0 auto; width: 22px; height: 22px; margin-top: 1px; }
+  .verdict .vt { font-weight: 700; font-size: 15px; margin-bottom: 3px; }
+  .verdict .vb { font-size: 14px; color: var(--text-secondary); }
+
+  .hero { text-align: center; padding: 26px 0 10px; }
+  .hero .num { font-size: 60px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+  .hero .cap { font-size: 14px; color: var(--text-secondary); margin-top: 8px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 18px; }
+  .tile { background: var(--surface-1); padding: 15px 16px; }
+  .tile .tl { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+  .tile .tv { font-size: 25px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+  .tile .td { font-size: 12px; margin-top: 4px; color: var(--text-secondary); }
+  .tile .td.up { color: var(--success-text); font-weight: 600; }
+
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin: 0 0 14px; font-size: 13px; color: var(--text-secondary); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  ol.actions { list-style: none; counter-reset: a; padding: 0; margin: 0; }
+  ol.actions li { counter-increment: a; position: relative; padding: 13px 0 13px 40px; border-top: 1px solid var(--grid); }
+  ol.actions li:first-child { border-top: none; }
+  ol.actions li::before {
+    content: counter(a); position: absolute; left: 0; top: 13px;
+    width: 25px; height: 25px; border-radius: 50%;
+    background: var(--page); border: 1px solid var(--baseline);
+    font-size: 12px; font-weight: 700; color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.actions .at { font-weight: 600; margin-bottom: 3px; }
+  ol.actions .ab { font-size: 14px; color: var(--text-secondary); }
+  .pri { display: inline-block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 7px; border-radius: 4px; margin-left: 8px; vertical-align: 2px; border: 1px solid var(--border); color: var(--text-secondary); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); }
+  th { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.n, th.n { text-align: right; }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-size: 14px; color: var(--text-secondary); padding: 8px 0; font-weight: 500; }
+  summary:hover { color: var(--text-primary); }
+  .hidden { display: none; }
+  footer { color: var(--text-muted); font-size: 13px; margin-top: 28px; text-align: center; line-height: 1.6; }
+  .tt { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--baseline); border-radius: 7px; padding: 7px 10px; font-size: 13px; box-shadow: 0 3px 12px rgba(0,0,0,0.13); opacity: 0; transition: opacity .12s; z-index: 20; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>Elvenar Chapter 25 Planner</h1>
+    <p class="sub">Enter your city's numbers and get a diagnosis of what is actually holding you back, plus a prioritised plan. All the constants come from the community's Chapter 25 discussion thread — Dhurrin's Nox arithmetic, Dony's totals, The&nbsp;Fairy's portal maths, and iamthouth's run logs.</p>
+  </div>
+  <button class="theme-btn" id="themeBtn" type="button">Dark</button>
+</header>
+
+<form id="f" novalidate>
+
+<div class="card">
+  <h2>Where you are</h2>
+  <div class="grid">
+    <div>
+      <label for="quest">Current quest number</label>
+      <input type="number" id="quest" min="0" step="1" value="0">
+      <div class="hint">Optional. Used for context only.</div>
+    </div>
+    <div>
+      <label for="throne">Vallorian's Throne level</label>
+      <select id="throne">
+        <option value="1">Level 1 — 7h per Wisdom</option>
+        <option value="2">Level 2 — 6h per Wisdom</option>
+        <option value="3">Level 3 — 5h per Wisdom</option>
+        <option value="4">Level 4 — 4h per Wisdom</option>
+      </select>
+    </div>
+    <div>
+      <label for="wol">Buildings sold at level 3 so far</label>
+      <input type="number" id="wol" min="0" step="1" value="0">
+      <div class="hint">Lifetime total — this is your Wisdom of Life earned. 102 are needed.</div>
+    </div>
+  </div>
+  <div class="grid" style="margin-top:14px">
+    <div>
+      <label for="wy">Wisdom of Youth in stock</label>
+      <input type="number" id="wy" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="wa">Wisdom of Adults in stock</label>
+      <input type="number" id="wa" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="wg">Wisdom of Age in stock</label>
+      <input type="number" id="wg" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="wspent">Wisdoms already spent on research</label>
+      <input type="number" id="wspent" min="0" step="1" value="0">
+      <div class="hint">Rough estimate is fine. 897 are needed in total.</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Nox</h2>
+  <div class="grid">
+    <div>
+      <label for="noxStore">Nox currently in storage</label>
+      <input type="number" id="noxStore" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="noxDay">Gross Nox produced per day</label>
+      <input type="number" id="noxDay" min="0" step="1" value="0">
+      <div class="hint">If your Nox total sits stable day to day, production equals decay — <a href="#" id="stableLink">use 10% of storage</a>.</div>
+    </div>
+    <div>
+      <label for="sanct">Serpent's Sanctuaries placed</label>
+      <input type="number" id="sanct" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="saph">Eldian Sapphires available</label>
+      <input type="number" id="saph" min="0" step="1" value="0">
+      <div class="hint">120 sapphires per Sanctuary.</div>
+    </div>
+    <div>
+      <label for="lgn">Lighthouse of Good Neighbourhood level</label>
+      <input type="number" id="lgn" min="0" max="35" step="1" value="0">
+      <div class="hint">0 if you haven't built it.</div>
+    </div>
+  </div>
+  <div class="check"><input type="checkbox" id="ench"><label for="ench">Sanctuaries kept enchanted with Ensorcelled Endowment</label></div>
+  <div class="check"><input type="checkbox" id="help"><label for="help">Reliably getting neighbourly help on them</label></div>
+</div>
+
+<div class="card">
+  <h2>Settlement &amp; city</h2>
+  <div class="grid">
+    <div>
+      <label for="fielded">Settlement buildings currently placed</label>
+      <input type="number" id="fielded" min="0" step="1" value="0">
+      <div class="hint">Total across Kids, Adults and Elders.</div>
+    </div>
+    <div>
+      <label for="arm">Armories in your city</label>
+      <input type="number" id="arm" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="prosp">Available Prosperity</label>
+      <input type="number" id="prosp" min="0" step="1" value="0">
+      <div class="hint">Unspent. The first Throne upgrade needs 260.</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Boosters &amp; spells</h2>
+  <div class="grid">
+    <div>
+      <label for="boost">Time boosters in stock (total hours)</label>
+      <input type="number" id="boost" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="gg">Generous Guests enchantments</label>
+      <input type="number" id="gg" min="0" step="1" value="0">
+      <div class="hint">+20% output per pickup, 12 hours per cast.</div>
+    </div>
+  </div>
+  <div class="btnrow" style="margin-top:20px">
+    <button type="submit">Get my plan</button>
+    <button type="button" class="ghost" id="exBtn">Load example city</button>
+    <button type="button" class="ghost" id="clrBtn">Clear</button>
+  </div>
+</div>
+
+</form>
+
+<div id="out" class="hidden"></div>
+
+<footer>
+  All figures are estimates from community-reported numbers, not from game files.<br>
+  Built from the Chapter 25 discussion thread. Share and modify freely.
+</footer>
+
+</div>
+
+<div class="tt" id="tt" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Chapter 25 constants, sourced from the forum thread ---------- */
+  var C = {
+    NOX_L1_L2: 1330,          // Dhurrin: level 1 -> 2
+    NOX_L2_L3: 1780,          // Dhurrin: level 2 -> 3
+    NOX_CYCLE: 3110,          // full cost of one building, cradle to sale
+    LIFE_DAYS: 9,             // expiry window
+    NOX_PER_BLD_DAY: 3110 / 9,// 345.5 -- Dhurrin's steady-state figure
+    BUILDINGS_TOTAL: 102,     // 72 for the tech tree + 30 for portal level 4
+    NOX_TOTAL: 317220,        // Dony: 102 buildings
+    // The Fairy's portal breakdown: items needed, hours each at that Throne level
+    TIERS: [
+      { items: 12,  hours: 7, label: "to the 1st Throne upgrade" },
+      { items: 188, hours: 6, label: "to the 2nd Throne upgrade" },
+      { items: 269, hours: 5, label: "to the 3rd Throne upgrade" },
+      { items: 428, hours: 4, label: "for the remaining research" }
+    ],
+    ITEMS_TOTAL: 897,
+    SAPH_PER_SANCT: 120,
+    SANCT_BASE_DAY: 484,      // 605 per 30h collection, unenchanted, unhelped
+    HELP_MULT: 1.45,          // 878 vs 605 with neighbourly help
+    LGN_MAX_MULT: 1.16,       // 1018 vs 878 at LGN 10 with the enchantment
+    DECAY: 0.10,
+    GG_BOOST: 0.20,
+    GG_HOURS: 12,
+    QUEUE: 5,
+    BOOSTER_RESERVE: 0.15,    // held back for build/upgrade rushes and Finity Gear
+    TARGET_BANK_DAYS: 0.5,    // at 10% decay, holding more than half a day's output is a tax
+    ARMORY_KEEP: 3
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
+  var fmt = function (n) {
+    if (!isFinite(n)) return "∞";
+    n = Math.round(n);
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+  var days = function (n) { return !isFinite(n) || n > 3650 ? "∞" : String(Math.round(n)); };
+
+  /* ---------- the model ---------- */
+  function model(i) {
+    var r = {};
+
+    /* Nox: what one Sanctuary is actually worth in this city */
+    r.perSanct = C.SANCT_BASE_DAY
+      * (i.help ? C.HELP_MULT : 1)
+      * (i.ench ? (1 + (C.LGN_MAX_MULT - 1) * Math.min(i.lgn, 10) / 10) : 1);
+
+    /* Calibrate to their stated production: whatever isn't Sanctuaries is
+       main hall, old portals, wonders. Keeps the projection grounded. */
+    r.otherNox = Math.max(0, i.noxDay - i.sanct * r.perSanct);
+
+    r.decayNow = i.noxStore * C.DECAY;
+    r.netNow = i.noxDay - r.decayNow;
+
+    r.newSanct = Math.floor(i.saph / C.SAPH_PER_SANCT);
+    r.sanctAfter = i.sanct + r.newSanct;
+    r.grossAfter = r.sanctAfter * r.perSanct + r.otherNox;
+
+    /* Never advise growing the bank — someone already running lean stays lean. */
+    var idealBank = Math.max(2000, r.grossAfter * C.TARGET_BANK_DAYS);
+    r.targetBank = i.noxStore > 0 ? Math.min(i.noxStore, idealBank) : idealBank;
+    r.netAfter = r.grossAfter - r.targetBank * C.DECAY;
+    r.netBankFixOnly = i.noxDay - Math.max(2000, i.noxDay * C.TARGET_BANK_DAYS) * C.DECAY;
+
+    /* how big a settlement each Nox income can actually sustain */
+    r.sustainNow = Math.max(0, Math.floor(r.netNow / C.NOX_PER_BLD_DAY));
+    r.sustainAfter = Math.max(0, Math.floor(r.netAfter / C.NOX_PER_BLD_DAY));
+    r.perTypeAfter = Math.floor(r.sustainAfter / 3);
+
+    /* Nox runway to finish the chapter's buildings */
+    r.bldLeft = Math.max(0, C.BUILDINGS_TOTAL - i.wol);
+    r.noxNeed = r.bldLeft * C.NOX_CYCLE;
+    var fromBank = Math.min(i.noxStore, r.noxNeed);
+    r.noxDaysNow = r.netNow > 0 ? (r.noxNeed - fromBank) / r.netNow : Infinity;
+    r.noxDaysAfter = r.netAfter > 0 ? (r.noxNeed - fromBank) / r.netAfter : Infinity;
+
+    /* Portal: walk The Fairy's tiers from wherever they are */
+    r.made = i.wy + i.wa + i.wg + i.wspent;
+    r.itemsLeft = Math.max(0, C.ITEMS_TOTAL - r.made);
+    var seen = 0, left = r.made, hours = 0, tierNote = "";
+    for (var t = 0; t < C.TIERS.length; t++) {
+      var tier = C.TIERS[t];
+      var doneHere = Math.min(left, tier.items);
+      left -= doneHere;
+      var remHere = tier.items - doneHere;
+      if (remHere > 0 && !tierNote) tierNote = fmt(remHere) + " items " + tier.label;
+      hours += remHere * tier.hours;
+      seen += tier.items;
+    }
+    r.portalHoursRaw = hours;
+    r.nextTier = tierNote;
+
+    /* Boosters and Generous Guests. GG lifts output per pickup, so it removes
+       production hours; boosters remove wall-clock. Pairing them compounds. */
+    r.throneBoost = i.boost * (1 - C.BOOSTER_RESERVE);
+    r.ggCover = i.gg * C.GG_HOURS;
+    r.ggPaired = Math.min(r.portalHoursRaw, r.ggCover + Math.min(r.throneBoost, r.portalHoursRaw));
+    r.ggSaved = r.ggPaired * (C.GG_BOOST / (1 + C.GG_BOOST));
+    r.portalHoursEff = r.portalHoursRaw - r.ggSaved;
+
+    r.portalDaysRaw = r.portalHoursRaw / 24;
+    r.portalDaysAfter = Math.max(0, r.portalHoursEff - r.throneBoost) / 24;
+
+    /* Chapter length is whichever constraint is slower; they run in parallel */
+    r.finishNow = Math.max(r.noxDaysNow, r.portalDaysRaw);
+    r.finishAfter = Math.max(r.noxDaysAfter, r.portalDaysAfter);
+    r.boundAfter = r.noxDaysAfter > r.portalDaysAfter ? "Nox" : "Throne";
+    r.queueRunway = C.QUEUE * C.TIERS[Math.min(i.throne, 4) - 1].hours;
+    r.ggDaysCover = i.gg / 2;
+
+    return r;
+  }
+
+  /* ---------- the recommendations ---------- */
+  function advise(i, r) {
+    var a = [];
+    var push = function (pri, title, body) { a.push({ pri: pri, title: title, body: body }); };
+
+    if (r.netNow <= r.decayNow * 0.15 && i.noxStore > 0 && i.noxDay > 0) {
+      push("critical", "Spend your Nox down to about " + fmt(r.targetBank),
+        "You hold " + fmt(i.noxStore) + " Nox decaying at 10% a day, which destroys " + fmt(r.decayNow) +
+        " daily against " + fmt(i.noxDay) + " produced. Your net usable Nox is effectively " +
+        fmt(Math.max(0, r.netNow)) + ". Running a small bank instead recovers roughly " +
+        fmt(r.netBankFixOnly - r.netNow) + " Nox a day for free — spend it the day you earn it.");
+    }
+
+    if (i.fielded === 0) {
+      push("critical", "Field settlement buildings today",
+        "Nothing is producing, so nothing is feeding the Throne and no Wisdom of Life is accruing. " +
+        "Every idle day is a day of Nox production lost to decay for no return.");
+    }
+
+    if (r.newSanct > 0) {
+      push("high", "Buy " + r.newSanct + " more Serpent's " + (r.newSanct === 1 ? "Sanctuary" : "Sanctuaries"),
+        r.newSanct * C.SAPH_PER_SANCT + " of your " + fmt(i.saph) + " sapphires. That takes you to " +
+        r.sanctAfter + " and lifts gross Nox from " + fmt(i.noxDay) + " to about " + fmt(r.grossAfter) +
+        " a day. Sapphires only otherwise buy premium culture, so there is rarely a better use.");
+    }
+
+    if (i.arm > C.ARMORY_KEEP + 1) {
+      push("high", "Teleport " + (i.arm - C.ARMORY_KEEP) + " armories, keep " + C.ARMORY_KEEP,
+        "Finity Gear was the least constrained resource in the whole chapter — iamthouth finished on a single armory, " +
+        "time-boosting it when needed. That space is worth far more as Sanctuaries.");
+    }
+
+    if (i.wol < C.BUILDINGS_TOTAL && i.throne < 4) {
+      if (i.wol === 0 && i.throne === 1) {
+        push("high", "Sell your first 10 buildings early to break the tech lock",
+          "The first portal upgrade research needs 10 buildings sold at level 3. With no Wisdom of Life banked you are hard blocked, " +
+          "so take the first 10 to level 3 and sell without waiting out the 9 days. You sell the instant the upgrade starts — " +
+          "no waiting for it to finish, no booster required.");
+      }
+      push("high", "Put every Wisdom of Life into Throne upgrades until level 4",
+        "You are at level " + i.throne + ", producing one Wisdom every " + C.TIERS[i.throne - 1].hours +
+        " hours. Reaching level 4 cuts that to 4 hours, which is close to halving everything you have left. " +
+        "Nothing else competes for Wisdom of Life until that is done.");
+    }
+
+    if (i.fielded > r.sustainAfter && r.sustainAfter > 0) {
+      push("medium", "You are overbuilt — " + i.fielded + " placed, about " + r.sustainAfter + " sustainable",
+        "Each building consumes " + Math.round(C.NOX_PER_BLD_DAY) + " Nox a day averaged over its 9-day life. " +
+        "Even after the Sanctuaries your income supports roughly " + r.sustainAfter + " total (" + r.perTypeAfter +
+        " of each type). Beyond that they expire unsold and the Nox is wasted.");
+    } else if (r.sustainAfter > i.fielded) {
+      push("medium", "Room for " + (r.sustainAfter - i.fielded) + " more settlement buildings",
+        "Your Nox income supports about " + r.sustainAfter + " total, or " + r.perTypeAfter +
+        " of each type. Stagger placement over several days so they don't all expire on the same morning, " +
+        "and rush each straight to level 2 — level 1 only burns the expiry clock.");
+    }
+
+    if (i.gg > 0) {
+      push("medium", "Never boost the Throne outside a Generous Guests window",
+        "Generous Guests adds 20% output per pickup; boosters create extra pickups. They multiply. " +
+        "Your " + i.gg + " spells cover about " + Math.round(r.ggDaysCover) + " days of continuous uptime. " +
+        "Concentrate boosters inside those windows, five queued productions at a time, rather than spending them whenever you log in.");
+    } else {
+      push("medium", "Craft Generous Guests — this is your cheapest win",
+        "+20% output per pickup on the Throne, applied to the Throne itself. Across what you have left that is worth roughly " +
+        Math.round(r.portalHoursRaw * (C.GG_BOOST / (1 + C.GG_BOOST)) / 24) +
+        " days. Two casts a day covers you continuously.");
+    }
+
+    push("medium", "Keep the Throne queue full — it holds " + C.QUEUE,
+      "That is " + r.queueRunway + " hours of runway at your current Throne level. Idle Throne time is the one loss no booster can buy back; " +
+      "fill it before bed and before work and you will essentially never stall.");
+
+    if (i.sanct + r.newSanct > 0) {
+      if (!i.ench) {
+        push("medium", "Enchant every Sanctuary and keep them enchanted",
+          "Unenchanted is 605 Nox against 1,018 when enchanted at a high Lighthouse with neighbourly help — you are leaving around 40% on the table. " +
+          "Dhurrin enchants three months ahead specifically so he cannot forget.");
+      }
+      if (!i.help) {
+        push("medium", "Get reliable neighbourly help on your Sanctuaries",
+          "Help takes each Sanctuary from 605 to 878 Nox per collection. If your fellowship isn't visiting consistently, that is a third of your Nox sitting unclaimed.");
+      }
+      if (i.lgn < 10) {
+        push("medium", i.lgn === 0 ? "Build the Lighthouse of Good Neighbourhood" : "Level the Lighthouse of Good Neighbourhood to 10+",
+          "It multiplies every Sanctuary you own at once. Both Dhurrin and iamthouth named it the best Nox investment available in this chapter.");
+      }
+    }
+
+    if (i.throne === 1 && i.prosp > 0 && i.prosp < 260) {
+      push("medium", "Prosperity is gating your first Throne upgrade",
+        "You have " + fmt(i.prosp) + " available and the first upgrade needs 260. Selling a level 3 settlement building frees about 7 each; " +
+        "extra workshops and magic residences also add Prosperity.");
+    }
+
+    var ws = [i.wy, i.wa, i.wg], hi = Math.max.apply(null, ws), lo = Math.min.apply(null, ws);
+    if (hi > 0 && hi >= lo * 3 && hi - lo >= 5) {
+      push("low", "Your three Wisdoms are drifting out of balance",
+        "Research demand is unevenly spread — the tier 3 factory upgrade column is very heavy on the youngest Wisdom, " +
+        "and Elder Wisdom is easy to overproduce. Produce toward whichever your next research column actually wants.");
+    }
+
+    if (i.wol < 10) {
+      push("low", "Don't rush ahead to the portal upgrade research",
+        "It cannot be completed until you have sold 10 fully upgraded buildings. Dhurrin burned 100–200 one-hour boosters " +
+        "racing to unlock a tech he then couldn't use.");
+    }
+
+    return a;
+  }
+
+  /* ---------- chart: days remaining by constraint, today vs after the plan ---------- */
+  function chart(r) {
+    var cap = function (v) { return !isFinite(v) || v > 400 ? 400 : v; };
+    var rows = [
+      { name: "Nox supply", now: r.noxDaysNow, after: r.noxDaysAfter },
+      { name: "Throne production", now: r.portalDaysRaw, after: r.portalDaysAfter }
+    ];
+    var max = 1;
+    rows.forEach(function (d) { max = Math.max(max, cap(d.now), cap(d.after)); });
+    max = Math.ceil(max / 20) * 20;
+
+    var W = 640, padL = 132, padR = 62, padT = 8, padB = 34;
+    var bandH = 62, barH = 22, gap = 2;
+    var H = padT + rows.length * bandH + padB;
+    var plotW = W - padL - padR;
+    var x = function (v) { return padL + (cap(v) / max) * plotW; };
+
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="' + H +
+            '" role="img" aria-label="Days remaining by constraint, today versus after the plan" style="overflow:visible">';
+
+    // gridlines, hairline, recessive
+    var ticks = 4;
+    for (var g = 0; g <= ticks; g++) {
+      var tv = max * g / ticks, tx = padL + (g / ticks) * plotW;
+      s += '<line x1="' + tx + '" y1="' + padT + '" x2="' + tx + '" y2="' + (H - padB) +
+           '" stroke="var(--grid)" stroke-width="1"/>';
+      s += '<text x="' + tx + '" y="' + (H - padB + 18) + '" fill="var(--text-muted)" font-size="11.5" text-anchor="middle" style="font-variant-numeric:tabular-nums">' + Math.round(tv) + '</text>';
+    }
+    s += '<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (H - padB) + '" stroke="var(--baseline)" stroke-width="1"/>';
+
+    rows.forEach(function (d, idx) {
+      var top = padT + idx * bandH + (bandH - (barH * 2 + gap)) / 2;
+      s += '<text x="' + (padL - 12) + '" y="' + (top + barH + gap / 2 + 4) +
+           '" fill="var(--text-secondary)" font-size="13" text-anchor="end">' + d.name + '</text>';
+
+      [{ v: d.now, c: "var(--series-1)", k: "If nothing changes", y: top },
+       { v: d.after, c: "var(--series-2)", k: "After the plan", y: top + barH + gap }].forEach(function (b) {
+        var w = Math.max(3, x(b.v) - padL);
+        var rr = Math.min(4, w / 2);
+        // 4px rounded data-end, square at the baseline
+        s += '<path d="M' + padL + ' ' + b.y + ' H' + (padL + w - rr) +
+             ' a' + rr + ' ' + rr + ' 0 0 1 ' + rr + ' ' + rr +
+             ' V' + (b.y + barH - rr) + ' a' + rr + ' ' + rr + ' 0 0 1 -' + rr + ' ' + rr +
+             ' H' + padL + ' Z" fill="' + b.c + '" class="bar" data-k="' + b.k +
+             '" data-n="' + d.name + '" data-v="' + days(b.v) + '"/>';
+        s += '<text x="' + (padL + w + 8) + '" y="' + (b.y + barH / 2 + 4) +
+             '" fill="var(--text-secondary)" font-size="12.5" style="font-variant-numeric:tabular-nums">' + days(b.v) + '</text>';
+      });
+    });
+
+    s += '<text x="' + (padL + plotW / 2) + '" y="' + (H - 2) +
+         '" fill="var(--text-muted)" font-size="11.5" text-anchor="middle">days remaining</text>';
+    s += '</svg>';
+    return s;
+  }
+
+  /* ---------- render ---------- */
+  function render(i, r) {
+    var acts = advise(i, r);
+    var bound = r.boundAfter === "Nox"
+      ? "Nox supply is still what limits you after the plan."
+      : "After the plan the Throne is what limits you — which is the best available state; everyone in the thread ended there.";
+
+    var sev, ico, vt;
+    if (!isFinite(r.finishNow) || r.finishNow > 200) {
+      sev = "critical"; vt = "Stalled";
+    } else if (r.finishNow > 90) {
+      sev = "serious"; vt = "Slow";
+    } else if (r.finishNow > 55) {
+      sev = "warning"; vt = "Workable";
+    } else {
+      sev = "good"; vt = "On track";
+    }
+    ico = {
+      critical: '<circle cx="11" cy="11" r="9"/><path d="M11 6v6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="11" cy="15.7" r="1.3" fill="#fff"/>',
+      serious:  '<circle cx="11" cy="11" r="9"/><path d="M11 6v6" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="11" cy="15.7" r="1.3" fill="#fff"/>',
+      warning:  '<circle cx="11" cy="11" r="9"/><path d="M11 6v6" stroke="#1a1a19" stroke-width="2.2" stroke-linecap="round"/><circle cx="11" cy="15.7" r="1.3" fill="#1a1a19"/>',
+      good:     '<circle cx="11" cy="11" r="9"/><path d="M6.6 11.2l3 3 5-5.6" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+    }[sev];
+
+    var h = "";
+
+    h += '<div class="card">';
+    h += '<div class="verdict" style="background:color-mix(in srgb, var(--' + sev + ') 9%, var(--surface-1))">' +
+         '<svg class="ico" viewBox="0 0 22 22" fill="var(--' + sev + ')" aria-hidden="true">' + ico + '</svg>' +
+         '<div><div class="vt">' + vt + ' — ' + (isFinite(r.finishNow) && r.finishNow <= 3650
+            ? "about " + days(r.finishNow) + " days if nothing changes"
+            : "your city cannot finish from here without changes") + '</div>' +
+         '<div class="vb">Working the plan below brings that to roughly <strong>' + days(r.finishAfter) +
+         ' days</strong>. ' + bound + '</div></div></div>';
+
+    h += '<div class="hero"><div class="num">' + days(r.finishAfter) + '</div>' +
+         '<div class="cap">days to finish Chapter 25, following the plan</div></div>';
+
+    h += '<div class="tiles">';
+    h += '<div class="tile"><div class="tl">Usable Nox per day</div><div class="tv">' + fmt(Math.max(0, r.netNow)) + '</div>' +
+         '<div class="td' + (r.netAfter > r.netNow ? ' up' : '') + '">' +
+         (r.netAfter > r.netNow ? '↑ ' + fmt(r.netAfter) + ' after the plan' : 'after decay') + '</div></div>';
+    h += '<div class="tile"><div class="tl">Sustainable settlement</div><div class="tv">' + r.sustainAfter + '</div>' +
+         '<div class="td">' + r.perTypeAfter + ' of each type</div></div>';
+    h += '<div class="tile"><div class="tl">Buildings still to sell</div><div class="tv">' + r.bldLeft + '</div>' +
+         '<div class="td">' + fmt(r.noxNeed) + ' Nox needed</div></div>';
+    h += '<div class="tile"><div class="tl">Throne hours left</div><div class="tv">' + fmt(r.portalHoursRaw) + '</div>' +
+         '<div class="td">' + (r.nextTier || "all items produced") + '</div></div>';
+    h += '</div>';
+    h += '</div>';
+
+    h += '<div class="card"><h2>What is actually limiting you</h2>';
+    h += '<div class="legend">' +
+         '<span><i class="dot" style="background:var(--series-1)"></i>If nothing changes</span>' +
+         '<span><i class="dot" style="background:var(--series-2)"></i>After the plan</span></div>';
+    h += chart(r);
+    h += '<p class="hint" style="margin-top:10px">The chapter takes as long as whichever bar is longer — the two run in parallel. ' +
+         '“If nothing changes” assumes your current Sanctuaries and Nox habits, with boosters and Generous Guests left unspent.</p>';
+    h += '<details><summary>Show as a table</summary><table><thead><tr><th>Constraint</th>' +
+         '<th class="n">If nothing changes</th><th class="n">After the plan</th></tr></thead><tbody>' +
+         '<tr><td>Nox supply</td><td class="n">' + days(r.noxDaysNow) + ' days</td><td class="n">' + days(r.noxDaysAfter) + ' days</td></tr>' +
+         '<tr><td>Throne production</td><td class="n">' + days(r.portalDaysRaw) + ' days</td><td class="n">' + days(r.portalDaysAfter) + ' days</td></tr>' +
+         '</tbody></table></details></div>';
+
+    h += '<div class="card"><h2>Your plan, in order</h2><ol class="actions">';
+    acts.forEach(function (x) {
+      h += '<li><div class="at">' + x.title + '<span class="pri">' + x.pri + '</span></div>' +
+           '<div class="ab">' + x.body + '</div></li>';
+    });
+    h += '</ol></div>';
+
+    h += '<div class="card"><h2>The arithmetic</h2><details open><summary>How these numbers were reached</summary><table><tbody>';
+    var mrow = function (k, v) { h += '<tr><td>' + k + '</td><td class="n">' + v + '</td></tr>'; };
+    mrow("Nox per building, placement to sale", fmt(C.NOX_CYCLE));
+    mrow("Nox per building per day over its 9-day life", Math.round(C.NOX_PER_BLD_DAY));
+    mrow("Buildings to sell for the whole chapter", C.BUILDINGS_TOTAL);
+    mrow("Nox one Sanctuary yields in your city, per day", fmt(r.perSanct));
+    mrow("Nox from everything other than Sanctuaries", fmt(r.otherNox) + " / day");
+    mrow("Gross Nox after buying " + r.newSanct + " more", fmt(r.grossAfter) + " / day");
+    mrow("Lost to decay right now", fmt(r.decayNow) + " / day");
+    mrow("Portal items produced of 897", fmt(r.made));
+    mrow("Throne production hours remaining", fmt(r.portalHoursRaw));
+    mrow("Boosters allocated to the Throne (85%)", fmt(r.throneBoost) + " h");
+    mrow("Generous Guests coverage", fmt(r.ggCover) + " h");
+    mrow("Hours saved by pairing spells with boosters", fmt(r.ggSaved));
+    h += '</tbody></table></details></div>';
+
+    $("out").innerHTML = h;
+    $("out").classList.remove("hidden");
+    wireTips();
+    $("out").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function wireTips() {
+    var tt = $("tt");
+    Array.prototype.forEach.call(document.querySelectorAll(".bar"), function (b) {
+      b.addEventListener("mousemove", function (e) {
+        tt.innerHTML = "<strong>" + b.dataset.k + "</strong><br>" + b.dataset.n + ": " + b.dataset.v + " days";
+        tt.style.opacity = "1";
+        tt.style.left = (e.pageX + 14) + "px";
+        tt.style.top = (e.pageY - 14) + "px";
+      });
+      b.addEventListener("mouseleave", function () { tt.style.opacity = "0"; });
+    });
+  }
+
+  /* ---------- wiring ---------- */
+  $("f").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var i = {
+      quest: num("quest"), throne: parseInt($("throne").value, 10) || 1,
+      wol: num("wol"), wy: num("wy"), wa: num("wa"), wg: num("wg"), wspent: num("wspent"),
+      noxStore: num("noxStore"), noxDay: num("noxDay"), sanct: num("sanct"), saph: num("saph"),
+      lgn: num("lgn"), ench: $("ench").checked, help: $("help").checked,
+      fielded: num("fielded"), arm: num("arm"), prosp: num("prosp"),
+      boost: num("boost"), gg: num("gg")
+    };
+    render(i, model(i));
+  });
+
+  $("stableLink").addEventListener("click", function (e) {
+    e.preventDefault();
+    $("noxDay").value = Math.round(num("noxStore") * C.DECAY);
+  });
+
+  $("exBtn").addEventListener("click", function () {
+    var ex = { quest: 38, throne: 1, wol: 0, wy: 7, wa: 7, wg: 7, wspent: 0,
+      noxStore: 37000, noxDay: 3700, sanct: 4, saph: 921, lgn: 10,
+      fielded: 0, arm: 18, prosp: 2000, boost: 2961, gg: 79 };
+    Object.keys(ex).forEach(function (k) { if ($(k)) $(k).value = ex[k]; });
+    $("throne").value = "1"; $("ench").checked = true; $("help").checked = true;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  $("clrBtn").addEventListener("click", function () {
+    $("f").reset();
+    $("out").classList.add("hidden");
+  });
+
+  $("themeBtn").addEventListener("click", function () {
+    var d = document.documentElement.getAttribute("data-theme") === "dark";
+    document.documentElement.setAttribute("data-theme", d ? "light" : "dark");
+    this.textContent = d ? "Dark" : "Light";
+  });
+
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    document.documentElement.setAttribute("data-theme", "dark");
+    $("themeBtn").textContent = "Light";
+  }
+})();
+</script>
+</body>
+</html>
