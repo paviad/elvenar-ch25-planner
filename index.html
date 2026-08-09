@@ -205,9 +205,13 @@
       </select>
     </div>
     <div>
-      <label for="wol">Buildings sold at level 3 so far</label>
+      <label for="wol">Wisdom of Life in stock</label>
       <input type="number" id="wol" min="0" step="1" value="0">
-      <div class="hint">Lifetime total — this is your Wisdom of Life earned. 102 are needed.</div>
+    </div>
+    <div>
+      <label for="wolSpent">Wisdom of Life already spent</label>
+      <input type="number" id="wolSpent" min="0" step="1" value="0">
+      <div class="hint">Stock plus spent is how many buildings you have sold. 102 are needed in all.</div>
     </div>
   </div>
   <div class="grid" style="margin-top:14px">
@@ -417,7 +421,8 @@
     r.perTypeAfter = Math.floor(r.sustainAfter / 3);
 
     /* Nox runway to finish the chapter's buildings */
-    r.bldLeft = Math.max(0, C.BUILDINGS_TOTAL - i.wol);
+    r.wolEarned = i.wol + i.wolSpent;
+    r.bldLeft = Math.max(0, C.BUILDINGS_TOTAL - r.wolEarned);
     r.noxNeed = r.bldLeft * C.NOX_CYCLE;
     var fromBank = Math.min(i.noxStore, r.noxNeed);
     r.noxDaysNow = r.netNow > 0 ? (r.noxNeed - fromBank) / r.netNow : Infinity;
@@ -529,8 +534,8 @@
         "time-boosting it when needed. That space is worth far more as Sanctuaries.");
     }
 
-    if (i.wol < C.BUILDINGS_TOTAL && i.throne < 4) {
-      if (i.wol === 0 && i.throne === 1) {
+    if (r.wolEarned < C.BUILDINGS_TOTAL && i.throne < 4) {
+      if (r.wolEarned === 0 && i.throne === 1) {
         push("high", "Sell your first 10 buildings early to break the tech lock",
           "The first portal upgrade research needs 10 buildings sold at level 3. With no Wisdom of Life banked you are hard blocked, " +
           "so take the first 10 to level 3 and sell without waiting out the 9 days. You sell the instant the upgrade starts — " +
@@ -651,7 +656,7 @@
         "and Elder Wisdom is easy to overproduce. Produce toward whichever your next research column actually wants.");
     }
 
-    if (i.wol < 10) {
+    if (r.wolEarned < 10) {
       push("low", "Don't rush ahead to the portal upgrade research",
         "It cannot be completed until you have sold 10 fully upgraded buildings. Dhurrin burned 100–200 one-hour boosters " +
         "racing to unlock a tech he then couldn't use.");
@@ -930,6 +935,13 @@
 
     IMPORTED = f;
     var got = [], miss = [], R = f.res, V = f.inv, P = f.prog;
+    /* You cannot hold a Throne level without having produced the items that
+       unlocked it, so the level sets a hard floor on lifetime production —
+       a far better opening estimate than zero. */
+    var lvl = Math.min(4, Math.max(1, f.throne || 1));
+    var floorItems = [0, 0, 12, 200, 469][lvl] || 0;
+    var floorWol = lvl >= 2 ? 10 : 0;
+    var floorNote = lvl >= 2 ? "seeded with the minimum your Throne level implies — raise it if you have spent more" : "the export only reports what you are holding";
     var need = function (label, field, type, hint) { miss.push({ label: label, field: field, type: type || "number", hint: hint }); };
     var note = function (label) { miss.push({ label: label }); };
 
@@ -966,14 +978,30 @@
       setField("wy", has(wy) ? wy : 0); setField("wa", has(wa) ? wa : 0); setField("wg", has(wg) ? wg : 0);
       var stock = (has(wy) ? wy : 0) + (has(wa) ? wa : 0) + (has(wg) ? wg : 0);
       got.push("Wisdom stock <strong>" + (has(wy) ? wy : "?") + " / " + (has(wa) ? wa : "?") + " / " + (has(wg) ? wg : "?") + "</strong> (youth / adults / age)");
-      if (has(P.wisdoms_produced)) {
-        setField("wspent", Math.max(0, P.wisdoms_produced - stock));
+      if (has(P.wisdoms_produced) && P.wisdoms_produced > stock) {
+        setField("wspent", P.wisdoms_produced - stock);
         got.push("<strong>" + fmt(P.wisdoms_produced) + "</strong> Wisdoms produced in total of 897");
-      } else need("Wisdoms already spent on research", "wspent");
+      } else {
+        if (floorItems > stock) setField("wspent", floorItems - stock);
+        need("Wisdoms already spent on research", "wspent", "number", floorNote);
+      }
     } else { need("Wisdom of Youth in stock", "wy"); need("Wisdom of Adults in stock", "wa"); need("Wisdom of Age in stock", "wg"); }
 
-    if (has(P.wisdom_of_life_earned)) { setField("wol", P.wisdom_of_life_earned); got.push("<strong>" + fmt(P.wisdom_of_life_earned) + "</strong> " + (P.wisdom_of_life_earned === 1 ? "building" : "buildings") + " sold at level 3 of 102"); }
-    else need("Buildings sold at level 3 so far", "wol");
+    var wolStock = has(R.wisdom_of_life) ? R.wisdom_of_life
+                 : (has(P.wisdom_of_life_earned) ? P.wisdom_of_life_earned : null);
+    if (wolStock !== null) {
+      setField("wol", wolStock);
+      got.push("<strong>" + fmt(wolStock) + "</strong> Wisdom of Life in stock");
+      /* A lifetime figure is only believable when it exceeds the current stock;
+         if the two match it is almost certainly just the stock again. */
+      if (has(P.wisdom_of_life_earned) && P.wisdom_of_life_earned > wolStock) {
+        setField("wolSpent", P.wisdom_of_life_earned - wolStock);
+        got.push("<strong>" + fmt(P.wisdom_of_life_earned) + "</strong> earned in total of 102");
+      } else {
+        if (floorWol > wolStock) setField("wolSpent", floorWol - wolStock);
+        need("Wisdom of Life already spent on research", "wolSpent", "number", floorNote);
+      }
+    } else { need("Wisdom of Life in stock", "wol"); need("Wisdom of Life already spent on research", "wolSpent"); }
 
     if (has(f.boosterHours)) { setField("boost", f.boosterHours); got.push("<strong>" + fmt(f.boosterHours) + "</strong> hours of time boosters"); }
     else need("Time boosters, in hours", "boost");
@@ -1053,7 +1081,7 @@
     e.preventDefault();
     var i = {
       quest: num("quest"), throne: parseInt($("throne").value, 10) || 1,
-      wol: num("wol"), wy: num("wy"), wa: num("wa"), wg: num("wg"), wspent: num("wspent"),
+      wol: num("wol"), wolSpent: num("wolSpent"), wy: num("wy"), wa: num("wa"), wg: num("wg"), wspent: num("wspent"),
       noxStore: num("noxStore"), noxDay: num("noxDay"), sanct: num("sanct"), saph: num("saph"),
       lgn: num("lgn"), ench: $("ench").checked, help: $("help").checked,
       fielded: num("fielded"), arm: num("arm"), prosp: num("prosp"),
