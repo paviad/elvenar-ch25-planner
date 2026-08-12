@@ -340,6 +340,24 @@
       { items: 428, hours: 4, label: "for the remaining research" }
     ],
     ITEMS_TOTAL: 897,
+    TYPE_TOTAL: 299,          // each Wisdom is needed 299 times across the chapter
+    /* Each Throne upgrade research is gated on ONE specific Wisdom, not an
+       aggregate — read directly from the chapter's research config. */
+    GATES: [
+      { to: 2, type: "kid",   field: "wy", label: "Youth",  need: 10, gear: 1500, name: "First Throne Upgrade" },
+      { to: 3, type: "elder", field: "wg", label: "Age",    need: 20, gear: 2000, name: "Second Throne Upgrade" },
+      { to: 4, type: "adult", field: "wa", label: "Adults", need: 30, gear: 2000, name: "Third Throne Upgrade" }
+    ],
+    /* Wisdom mix the tree actually demands between one Throne level and the next.
+       Totals are a dead-even 299/299/299, but the path is heavily lumpy. */
+    PHASE: [
+      null,
+      { kid: 10,  adult: 2,   elder: 0   },
+      { kid: 47,  adult: 70,  elder: 71  },
+      { kid: 120, adult: 89,  elder: 60  },
+      { kid: 122, adult: 138, elder: 168 }
+    ],
+    WOL_FIRST_SINK: 3,        // First Workshops Upgrade is the first Wisdom of Life cost
     SAPH_PER_SANCT: 120,
     SANCT_BASE_DAY: 484,      // 605 per 30h collection, unenchanted, unhelped
     HELP_MULT: 1.45,          // 878 vs 605 with neighbourly help
@@ -496,6 +514,20 @@
       r.clusterHave = i.noxStore + Math.max(0, r.netNow) * r.clusterIn;
       r.clusterSpanH = (xs[xs.length - 1] - xs[0]) / 3600;
     }
+    /* Which Throne gate is next, and does the player hold the right Wisdom? */
+    r.gate = i.throne < 4 ? C.GATES[Math.min(i.throne, 3) - 1] : null;
+    if (r.gate) {
+      r.gateHave = { wy: i.wy, wa: i.wa, wg: i.wg }[r.gate.field] || 0;
+      r.gateShort = Math.max(0, r.gate.need - r.gateHave);
+    }
+    r.phase = C.PHASE[Math.min(4, Math.max(1, i.throne))];
+    if (r.phase) {
+      var pt = r.phase.kid + r.phase.adult + r.phase.elder;
+      r.phaseTop = r.phase.kid >= r.phase.adult && r.phase.kid >= r.phase.elder ? "Youth"
+                 : (r.phase.elder >= r.phase.adult ? "Age" : "Adults");
+      r.phaseTotal = pt;
+    }
+
     r.sanctEnch = i.sanctEnch;
     r.sanctTotal = i.sanctTotal;
 
@@ -535,30 +567,36 @@
     }
 
     if (r.wolEarned < C.BUILDINGS_TOTAL && i.throne < 4) {
-      if (r.wolEarned === 0 && i.throne === 1) {
-        push("high", "Sell your first 10 buildings early to break the tech lock",
-          "The first portal upgrade research needs 10 buildings sold at level 3. With no Wisdom of Life banked you are hard blocked, " +
-          "so take the first 10 to level 3 and sell without waiting out the 9 days. You sell the instant the upgrade starts — " +
-          "no waiting for it to finish, no booster required.");
+      if (r.gate) {
+        push(r.gateShort > 0 ? "critical" : "high",
+          r.gateShort > 0
+            ? "Produce " + r.gateShort + " more Wisdom of " + r.gate.label + " to unlock the " + r.gate.name
+            : "You can unlock the " + r.gate.name + " now",
+          "That research is gated on <strong>" + r.gate.need + " Wisdom of " + r.gate.label +
+          "</strong> specifically — not on an aggregate, and not on Wisdom of Life. You hold " + r.gateHave +
+          ", plus it wants " + fmt(r.gate.gear) + " Finity Gear. Set the Throne to " + r.gate.label +
+          " and leave it there until the gate clears; producing the other two right now does nothing for it.");
       }
-      push("high", "Put every Wisdom of Life into Throne upgrades until level 4",
+      push("high", "Getting the Throne to level 4 is worth about " + Math.round(r.upgradesWorth / 24) + " days",
         "You are at level " + i.throne + ", producing one Wisdom every " + C.TIERS[i.throne - 1].hours +
-        " hours. Getting to level 4 is worth roughly " + fmt(r.upgradesWorth) + " hours — about " +
-        Math.round(r.upgradesWorth / 24) + " days — bought once. Nothing else competes for Wisdom of Life until that is done.");
+        " hours; level 4 makes it 4. That is " + fmt(r.upgradesWorth) + " hours bought once, and nothing else in the chapter " +
+        "comes close. Every gate is a specific Wisdom the Throne produces itself — 10 Youth, then 20 Age, then 30 Adults — " +
+        "so the only route to a faster Throne is keeping the current one running.");
     }
 
     if (i.throne < 4) {
-      push("high", "When goods are tight, fund the upgrade queue before the Throne",
-        "Levelling buildings to 3 and running the Throne draw on the same settlement goods, so they compete. " +
-        "The next Throne upgrade takes an hour off every one of your " + fmt(r.itemsLeft) + " remaining items — about " +
-        fmt(r.nextUpgradeWorth) + " hours, or " + Math.round(r.nextUpgradeWorth / 24) + " days — while goods spent on production " +
-        "at level " + i.throne + " buy items at the worst rate you will ever have. Feed the Throne from Portal Profit spells and " +
-        "genuine surplus; send your buildings' own output to the upgrade queue. Experience is the one input Portal Profits can't " +
-        "cover, so expect that to pinch.");
+      push("high", "When settlement goods are tight, feed the Throne before the upgrade queue",
+        "Levelling buildings to 3 and running the Throne draw on the same settlement goods, so they compete — and the Throne wins. " +
+        "Its upgrades are gated on Wisdom the Throne itself produces, so starving it delays the next upgrade, worth about " +
+        Math.round(r.nextUpgradeWorth / 24) + " days across your " + fmt(r.itemsLeft) + " remaining items. Selling buildings " +
+        "yields Wisdom of Life, which no Throne upgrade needs — that pays for the other 72 research costs, and none of them are " +
+        "on the critical path. Keep the sale cycle ticking, because buildings expire regardless, but let the Throne eat first. " +
+        "Top it up with Portal Profit spells; Experience is the one input they can't cover.");
     } else {
-      push("high", "Invert your allocation — settlement goods now go to the Throne first",
-        "At level 4 nothing is gated on Wisdom of Life any more; both Dhurrin and Deborah finished the chapter holding a surplus of it. " +
-        "The portal is your only remaining wall, so feed it first and upgrade and sell buildings at whatever pace the Nox allows.");
+      push("high", "Everything goes to the Throne now — there are no gates left",
+        "At level 4 there is no further Throne upgrade to chase and the portal is your only remaining wall, so settlement goods go to " +
+        "it first and buildings get upgraded and sold at whatever pace the Nox allows. Both Dhurrin and Deborah finished holding " +
+        "surplus Wisdom of Life, which is the usual shape of the endgame.");
     }
 
     if (i.fielded > r.sustainAfter && r.sustainAfter > 0) {
@@ -649,17 +687,22 @@
         "extra workshops and magic residences also add Prosperity.");
     }
 
-    var ws = [i.wy, i.wa, i.wg], hi = Math.max.apply(null, ws), lo = Math.min.apply(null, ws);
-    if (hi > 0 && hi >= lo * 3 && hi - lo >= 5) {
-      push("low", "Your three Wisdoms are drifting out of balance",
-        "Research demand is unevenly spread — the tier 3 factory upgrade column is very heavy on the youngest Wisdom, " +
-        "and Elder Wisdom is easy to overproduce. Produce toward whichever your next research column actually wants.");
+    if (r.phase && r.phaseTotal > 0) {
+      var pc = function (n) { return Math.round(100 * n / r.phaseTotal); };
+      push("medium", "Don't produce the three Wisdoms round-robin",
+        "Across the whole chapter they are needed in exact balance — 299 each — but the path is lumpy, so an even production " +
+        "split is wrong almost everywhere. Between your Throne level and the next you need <strong>" + r.phase.kid +
+        " Youth, " + r.phase.adult + " Adults, " + r.phase.elder + " Age</strong> (" + pc(r.phase.kid) + " / " +
+        pc(r.phase.adult) + " / " + pc(r.phase.elder) + "%), so weight production toward " + r.phaseTop +
+        ". This is why one player found the factory-upgrade column starved of Youth while another finished having " +
+        "badly overproduced Age.");
     }
 
     if (r.wolEarned < 10) {
-      push("low", "Don't rush ahead to the portal upgrade research",
-        "It cannot be completed until you have sold 10 fully upgraded buildings. Dhurrin burned 100–200 one-hour boosters " +
-        "racing to unlock a tech he then couldn't use.");
+      push("low", "Wisdom of Life isn't what gates your Throne upgrades",
+        "The three Throne upgrades want 10 Youth, 20 Age and 30 Adults respectively. Wisdom of Life is spent elsewhere — " +
+        "the first call on it is the First Workshops Upgrade, at 3. So selling buildings early does not unlock the Throne, " +
+        "which is roughly the trap Dhurrin fell into when he burned 100–200 one-hour boosters racing to a tech he then couldn't use.");
     }
 
     /* Stable sort by severity — findings discovered late (expiry clusters,
@@ -773,7 +816,9 @@
     h += '<div class="tile"><div class="tl">Buildings to sell</div><div class="tv">' + r.bldLeft + '</div>' +
          '<div class="td">' + fmt(r.noxNeed) + ' Nox needed</div></div>';
     h += '<div class="tile"><div class="tl">Throne hours left</div><div class="tv">' + fmt(r.portalHoursRaw) + '</div>' +
-         '<div class="td">' + (r.nextTier || "all items produced") + '</div></div>';
+         '<div class="td">' + (r.gate
+            ? (r.gateShort > 0 ? r.gateShort + " more " + r.gate.label + " to upgrade" : r.gate.label + " gate is clear")
+            : (r.nextTier || "all items produced")) + '</div></div>';
     h += '<div class="tile"><div class="tl">Upgrades worth</div><div class="tv">' +
          (r.upgradesWorth > 0 ? Math.round(r.upgradesWorth / 24) + 'd' : '—') + '</div>' +
          '<div class="td">' + (r.upgradesWorth > 0
@@ -812,6 +857,9 @@
     mrow("Gross Nox after buying " + r.newSanct + " more", fmt(r.grossAfter) + " / day");
     mrow("Lost to decay right now", fmt(r.decayNow) + " / day");
     mrow("Portal items produced of 897", fmt(r.made));
+    mrow("Each Wisdom needed across the chapter", "299 Youth / 299 Adults / 299 Age");
+    if (r.gate) mrow("Next Throne gate", r.gate.need + " Wisdom of " + r.gate.label + " + " + fmt(r.gate.gear) + " Finity Gear");
+    if (r.phase) mrow("Wisdom mix to the next Throne level", r.phase.kid + " Youth / " + r.phase.adult + " Adults / " + r.phase.elder + " Age");
     mrow("Throne production hours remaining", fmt(r.portalHoursRaw));
     mrow("Hours if the Throne never levelled again", fmt(r.hoursIfStuck));
     mrow("So the remaining Throne upgrades are worth", fmt(r.upgradesWorth) + " h");
