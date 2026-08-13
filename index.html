@@ -534,6 +534,41 @@
       r.phaseTotal = pt;
     }
 
+    /* With the real frontier we stop guessing: score each open tech by what
+       the player is actually short of, nearest first. */
+    r.open = null;
+    if (i.frontier && i.frontier.length) {
+      var hold = {
+        ch25_wisdom_kid: i.wy, ch25_wisdom_adult: i.wa,
+        ch25_wisdom_elder: i.wg, ch25_wisdom_life: i.wol
+      };
+      var NAME = { ch25_wisdom_kid: "Youth", ch25_wisdom_adult: "Adults", ch25_wisdom_elder: "Age", ch25_wisdom_life: "Life" };
+      r.open = i.frontier.map(function (t) {
+        var short = [], gap = 0;
+        Object.keys(hold).forEach(function (k) {
+          var need = (t.costs && t.costs[k]) || 0;
+          if (need > hold[k]) { short.push({ k: k, n: need - hold[k], label: NAME[k] }); gap += need - hold[k]; }
+        });
+        return { name: t.name, short: short, gap: gap, kp: t.kp_missing };
+      }).sort(function (a, b) { return a.gap - b.gap; });
+      r.openReady = r.open.filter(function (t) { return t.gap === 0; });
+      /* A Wisdom is worth aiming at only if it is the SOLE thing missing from
+         some open tech — otherwise producing it unblocks nothing by itself. */
+      var solo = {}, want = {};
+      r.open.forEach(function (t) {
+        t.short.forEach(function (x) { want[x.label] = (want[x.label] || 0) + x.n; });
+        if (t.short.length === 1) {
+          var L = t.short[0].label;
+          if (!solo[L] || t.short[0].n < solo[L].n) solo[L] = { label: L, n: t.short[0].n, count: 0 };
+        }
+      });
+      r.open.forEach(function (t) { if (t.short.length === 1 && solo[t.short[0].label]) solo[t.short[0].label].count++; });
+      r.soloList = Object.keys(solo).map(function (k) { return solo[k]; })
+                     .sort(function (a, b) { return (b.count - a.count) || (a.n - b.n); });
+      r.wantList = Object.keys(want).sort(function (a, b) { return want[b] - want[a]; })
+                     .map(function (k) { return { label: k, n: want[k] }; });
+    }
+
     r.sanctEnch = i.sanctEnch;
     r.sanctTotal = i.sanctTotal;
 
@@ -573,7 +608,7 @@
     }
 
     if (r.wolEarned < C.BUILDINGS_TOTAL && i.throne < 4) {
-      if (r.gate) {
+      if (r.gate && !r.open) {
         push("high",
           r.gateShort > 0
             ? "Produce " + r.gateShort + " more Wisdom of " + r.gate.label + " to unlock the " + r.gate.name
@@ -668,7 +703,7 @@
           " Nox a day going uncollected, and an enchantment is all it takes.");
       }
       if (r.nLapsing > 0) {
-        push("medium", r.nLapsing + " enchantment" + (r.nLapsing === 1 ? "" : "s") + " lapse within 24 hours",
+        push("medium", r.nLapsing + " enchantment" + (r.nLapsing === 1 ? " lapses" : "s lapse") + " within 24 hours",
           "These are on Sanctuaries currently receiving help, so letting them run out costs you immediately. " +
           "Re-apply and stack the enchantment out as far as it will go — Dhurrin keeps his three months ahead " +
           "precisely so this can't happen.");
@@ -706,7 +741,29 @@
         "extra workshops and magic residences also add Prosperity.");
     }
 
-    if (r.phase && r.phaseTotal > 0) {
+    if (r.open) {
+      if (r.openReady.length) {
+        push("high", r.openReady.length === 1 ? "You can research " + r.openReady[0].name + " right now"
+                                              : "You can research " + r.openReady.length + " techs right now",
+          "Nothing is missing for " + r.openReady.map(function (t) { return "<strong>" + t.name + "</strong>"; }).join(", ") +
+          " — only KP. Clear those before producing anything else toward the tree.");
+      }
+      var near = r.open.filter(function (t) { return t.gap > 0; }).slice(0, 3);
+      if (near.length) {
+        push("high", "Nearest unlock: " + near[0].short.map(function (x) { return x.n + " " + x.label; }).join(" and ") +
+             " for " + near[0].name,
+          "Your open research is " + near.map(function (t) {
+            return "<strong>" + t.name + "</strong> (" + t.short.map(function (x) { return x.n + " " + x.label; }).join(", ") + ")";
+          }).join("; ") + ". This is read from your actual tech tree, so it is what is blocking you now — not a projection. " +
+          (r.soloList && r.soloList.length
+            ? "Aim the Throne at <strong>" + r.soloList[0].label + "</strong> — " + r.soloList[0].n + " more is the only " +
+              "single-Wisdom shortfall you have, so it is the one production that unblocks something on its own."
+            : "No single Wisdom unblocks anything here — every open tech is short of two things at once, so producing " +
+              "one type in isolation buys you nothing until the other arrives."));
+      }
+    }
+
+    if (!r.open && r.phase && r.phaseTotal > 0) {
       var pc = function (n) { return Math.round(100 * n / r.phaseTotal); };
       push("medium", "Don't produce the three Wisdoms round-robin",
         "Across the whole chapter they are needed in exact balance — 299 each — but the path is lumpy, so an even production " +
@@ -942,7 +999,8 @@
       ch25: false, expiries: [], enchKnown: false, helpKnown: false, sanctStates: [],
       v2: (data.schema_version || 1) >= 2,
       exportedAt: has(data.exported_at) ? data.exported_at : 0,
-      res: data.resources || {}, inv: data.inventory || {}, prog: data.progress || {}
+      res: data.resources || {}, inv: data.inventory || {}, prog: data.progress || {},
+      techs: (data.research && Array.isArray(data.research.technologies)) ? data.research.technologies : null
     };
     ents.forEach(function (e) {
       var id = String(e.cityentity_id || "");
@@ -966,6 +1024,26 @@
       }
       else if (ID.lgn.test(id)) f.lgn = Math.max(f.lgn, lvl);
     });
+
+    /* The research graph makes every lifetime figure exact: what a researched
+       tech cost is, by definition, what has been spent. */
+    if (f.techs) {
+      var WK = ["ch25_wisdom_kid", "ch25_wisdom_adult", "ch25_wisdom_elder", "ch25_wisdom_life", "finity_gear"];
+      f.used = {}; f.totals = {};
+      WK.forEach(function (k) { f.used[k] = 0; f.totals[k] = 0; });
+      f.frontier = [];
+      f.kpLeft = 0;
+      f.techs.forEach(function (t) {
+        var c = t.costs || {};
+        WK.forEach(function (k) {
+          var v = has(c[k]) ? c[k] : 0;
+          f.totals[k] += v;
+          if (t.state === "researched") f.used[k] += v;
+        });
+        if (t.state !== "researched") f.kpLeft += (has(t.kp_missing) ? t.kp_missing : 0);
+        if (t.state === "available") f.frontier.push(t);
+      });
+    }
 
     /* Boosters arrive as duration-in-hours → count. Sum to total hours. */
     var tb = f.inv.time_boosters;
@@ -1048,11 +1126,22 @@
       if (has(P.wisdoms_produced) && P.wisdoms_produced > stock) {
         setField("wspent", P.wisdoms_produced - stock);
         got.push("<strong>" + fmt(P.wisdoms_produced) + "</strong> Wisdoms produced in total of 897");
-      } else {
+      } else if (!f.techs) {
         if (floorItems > stock) setField("wspent", floorItems - stock);
         need("Wisdoms already spent on research", "wspent", "number", floorNote);
       }
     } else { need("Wisdom of Youth in stock", "wy"); need("Wisdom of Adults in stock", "wa"); need("Wisdom of Age in stock", "wg"); }
+
+    if (f.techs) {
+      var U = f.used, TT = f.totals;
+      var rs = f.techs.filter(function (t) { return t.state === "researched"; }).length;
+      got.push("research graph — <strong>" + rs + "</strong> of " + f.techs.length + " techs done, <strong>" +
+        f.frontier.length + "</strong> open, " + fmt(f.kpLeft) + " KP still to spend");
+      setField("wolSpent", U.ch25_wisdom_life);
+      setField("wspent", U.ch25_wisdom_kid + U.ch25_wisdom_adult + U.ch25_wisdom_elder);
+      got.push("spent so far — <strong>" + fmt(U.ch25_wisdom_life) + "</strong> Wisdom of Life and <strong>" +
+        fmt(U.ch25_wisdom_kid + U.ch25_wisdom_adult + U.ch25_wisdom_elder) + "</strong> Wisdoms, read from completed research");
+    }
 
     var wolStock = has(R.wisdom_of_life) ? R.wisdom_of_life
                  : (has(P.wisdom_of_life_earned) ? P.wisdom_of_life_earned : null);
@@ -1064,7 +1153,7 @@
       if (has(P.wisdom_of_life_earned) && P.wisdom_of_life_earned > wolStock) {
         setField("wolSpent", P.wisdom_of_life_earned - wolStock);
         got.push("<strong>" + fmt(P.wisdom_of_life_earned) + "</strong> earned in total of 102");
-      } else {
+      } else if (!f.techs) {
         if (floorWol > wolStock) setField("wolSpent", floorWol - wolStock);
         need("Wisdom of Life already spent on research", "wolSpent", "number", floorNote);
       }
@@ -1157,6 +1246,8 @@
       exportedAt: IMPORTED ? IMPORTED.exportedAt : 0,
       sanctEnch: IMPORTED && IMPORTED.enchKnown && IMPORTED.sanct > 0 ? IMPORTED.sanctEnch : undefined,
       sanctStates: IMPORTED && IMPORTED.helpKnown && IMPORTED.enchKnown ? IMPORTED.sanctStates : null,
+      frontier: IMPORTED && IMPORTED.techs ? IMPORTED.frontier : null,
+      kpLeft: IMPORTED && IMPORTED.techs ? IMPORTED.kpLeft : null,
       sanctTotal: IMPORTED ? IMPORTED.sanct : 0
     };
     render(i, model(i));
