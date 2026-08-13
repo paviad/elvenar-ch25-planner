@@ -434,6 +434,12 @@
     r.netBankFixOnly = i.noxDay - Math.max(2000, i.noxDay * C.TARGET_BANK_DAYS) * C.DECAY;
 
     /* how big a settlement each Nox income can actually sustain */
+    /* A fielded building absorbs ~345 Nox/day averaged over its 9-day cycle.
+       Income beyond what the placed buildings can absorb just sits and decays. */
+    r.cycleNox = i.fielded * C.NOX_PER_BLD_DAY;
+    r.noxSurplus = Math.max(0, r.netNow - r.cycleNox);
+    r.surplusIdle = r.netNow > 0 && r.noxSurplus > r.netNow * 0.12;
+
     r.sustainNow = Math.max(0, Math.floor(r.netNow / C.NOX_PER_BLD_DAY));
     r.sustainAfter = Math.max(0, Math.floor(r.netAfter / C.NOX_PER_BLD_DAY));
     r.perTypeAfter = Math.floor(r.sustainAfter / 3);
@@ -568,14 +574,17 @@
 
     if (r.wolEarned < C.BUILDINGS_TOTAL && i.throne < 4) {
       if (r.gate) {
-        push(r.gateShort > 0 ? "critical" : "high",
+        push("high",
           r.gateShort > 0
             ? "Produce " + r.gateShort + " more Wisdom of " + r.gate.label + " to unlock the " + r.gate.name
             : "You can unlock the " + r.gate.name + " now",
           "That research is gated on <strong>" + r.gate.need + " Wisdom of " + r.gate.label +
           "</strong> specifically — not on an aggregate, and not on Wisdom of Life. You hold " + r.gateHave +
-          ", plus it wants " + fmt(r.gate.gear) + " Finity Gear. Set the Throne to " + r.gate.label +
-          " and leave it there until the gate clears; producing the other two right now does nothing for it.");
+          ", plus it wants " + fmt(r.gate.gear) + " Finity Gear. This is a <em>target</em>, not necessarily what is blocking you " +
+          "today — plenty of other research sits open in parallel, and this tool can't see your position in the tree. " +
+          "But the Throne makes one Wisdom per cycle whatever type you pick, and you need 299 of each eventually, so choosing " +
+          r.gate.label + " costs you nothing and pulls the upgrade forward. If a tech you can finish right now needs a " +
+          "different Wisdom, take that first — the ordering matters far less than never letting the Throne idle.");
       }
       push("high", "Getting the Throne to level 4 is worth about " + Math.round(r.upgradesWorth / 24) + " days",
         "You are at level " + i.throne + ", producing one Wisdom every " + C.TIERS[i.throne - 1].hours +
@@ -585,7 +594,7 @@
     }
 
     if (i.throne < 4) {
-      push("high", "When settlement goods are tight, feed the Throne before the upgrade queue",
+      if (!r.surplusIdle) push("high", "When settlement goods are tight, feed the Throne before the upgrade queue",
         "Levelling buildings to 3 and running the Throne draw on the same settlement goods, so they compete — and the Throne wins. " +
         "Its upgrades are gated on Wisdom the Throne itself produces, so starving it delays the next upgrade, worth about " +
         Math.round(r.nextUpgradeWorth / 24) + " days across your " + fmt(r.itemsLeft) + " remaining items. Selling buildings " +
@@ -599,13 +608,23 @@
         "surplus Wisdom of Life, which is the usual shape of the endgame.");
     }
 
+    if (r.surplusIdle && i.fielded > 0) {
+      push("critical", "About " + fmt(r.noxSurplus) + " Nox a day is piling up with nowhere to go",
+        "Your " + i.fielded + " settlement buildings absorb roughly " + fmt(r.cycleNox) + " Nox a day across the build, upgrade " +
+        "and sell cycle, but you are netting " + fmt(r.netNow) + ". The difference sits in storage losing 10% a day. " +
+        "This is not a conflict with the Throne — at level " + i.throne + " it can only eat " +
+        (Math.round(240 / C.TIERS[Math.min(i.throne, 4) - 1].hours) / 10) + " Wisdom a day, so your settlement is already " +
+        "overproducing goods for it. Cycle buildings harder: upgrade to level 3, sell, rebuild. That converts decaying Nox " +
+        "into Wisdom of Life, which you need 72 of and which nothing else supplies.");
+    }
+
     if (i.fielded > r.sustainAfter && r.sustainAfter > 0) {
       push("medium", "You are overbuilt — " + i.fielded + " placed, about " + r.sustainAfter + " sustainable",
         "Each building consumes " + Math.round(C.NOX_PER_BLD_DAY) + " Nox a day averaged over its 9-day life. " +
         "Even after the Sanctuaries your income supports roughly " + r.sustainAfter + " total (" + r.perTypeAfter +
         " of each type). Beyond that they expire unsold and the Nox is wasted.");
     } else if (r.sustainAfter > i.fielded) {
-      push("medium", "Room for " + (r.sustainAfter - i.fielded) + " more settlement buildings",
+      push(r.surplusIdle ? "high" : "medium", "Room for " + (r.sustainAfter - i.fielded) + " more settlement buildings",
         "Your Nox income supports about " + r.sustainAfter + " total, or " + r.perTypeAfter +
         " of each type. Stagger placement over several days so they don't all expire on the same morning, " +
         "and rush each straight to level 2 — level 1 only burns the expiry clock.");
