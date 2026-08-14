@@ -468,13 +468,13 @@
     r.portalHoursRaw = hours;
     r.nextTier = tierNote;
 
-    /* Boosters and Generous Guests. GG lifts output per pickup, so it removes
-       production hours; boosters remove wall-clock. Pairing them compounds. */
+    /* The Throne yields exactly 1 Wisdom per production and that quantity cannot
+       be buffed, so Generous Guests does nothing for Throne throughput — it lifts
+       SETTLEMENT goods output, i.e. the inputs. Only time boosters shorten the grind. */
     r.throneBoost = i.boost * (1 - C.BOOSTER_RESERVE);
     r.ggCover = i.gg * C.GG_HOURS;
-    r.ggPaired = Math.min(r.portalHoursRaw, r.ggCover + Math.min(r.throneBoost, r.portalHoursRaw));
-    r.ggSaved = r.ggPaired * (C.GG_BOOST / (1 + C.GG_BOOST));
-    r.portalHoursEff = r.portalHoursRaw - r.ggSaved;
+    r.ggSaved = 0;
+    r.portalHoursEff = r.portalHoursRaw;
 
     /* What the Throne upgrades are worth. Each one takes an hour off every item
        still ahead of you, so they are priced in items remaining — which is why
@@ -666,15 +666,12 @@
     }
 
     if (i.gg > 0) {
-      push("medium", "Spend boosters inside a Generous Guests window, not at random",
-        "Generous Guests adds 20% output per pickup; boosters create extra pickups. They multiply. " +
-        "Your " + i.gg + " spells cover about " + Math.round(r.ggDaysCover) + " days of continuous uptime. " +
-        "Concentrate boosters inside those windows, five queued productions at a time, rather than spending them whenever you log in. The exception is an idle Throne: an unbuffed pickup still beats no pickup, and idle time is the one loss no booster can recover.");
-    } else {
-      push("medium", "Craft Generous Guests — this is your cheapest win",
-        "+20% output per pickup on the Throne, applied to the Throne itself. Across what you have left that is worth roughly " +
-        Math.round(r.portalHoursRaw * (C.GG_BOOST / (1 + C.GG_BOOST)) / 24) +
-        " days. Two casts a day covers you continuously.");
+      push(r.surplusIdle ? "low" : "medium", "Hold Generous Guests until settlement goods actually pinch",
+        "The Throne produces exactly <strong>1</strong> Wisdom per production and that quantity cannot be buffed, so Generous " +
+        "Guests does nothing for portal throughput — it lifts your <em>settlement</em> goods output by 20%, meaning the inputs. " +
+        (r.surplusIdle ? "You are already making goods faster than the Throne can consume them, so a spell cast now buys nothing. " : "") +
+        "Your " + i.gg + " spells are worth saving for the back half, when Experience becomes the thing stopping you from keeping " +
+        "the queue full — that is where iamthouth ended up, short of Experience with the Throne waiting.");
     }
 
     push("medium", "Keep the Throne queue full — it holds " + C.QUEUE,
@@ -940,8 +937,6 @@
     mrow("Hours if the Throne never levelled again", fmt(r.hoursIfStuck));
     mrow("So the remaining Throne upgrades are worth", fmt(r.upgradesWorth) + " h");
     mrow("Boosters allocated to the Throne (85%)", fmt(r.throneBoost) + " h");
-    mrow("Generous Guests coverage", fmt(r.ggCover) + " h");
-    mrow("Hours saved by pairing spells with boosters", fmt(r.ggSaved));
     h += '</tbody></table></details></div>';
 
     $("out").innerHTML = h;
