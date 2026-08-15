@@ -368,7 +368,9 @@
     DECAY: 0.10,
     GG_BOOST: 0.20,
     GG_HOURS: 12,
-    QUEUE: 5,
+    /* Queue slots equal the Throne level plus one: 2 / 3 / 4 / 5. iamthouth's
+       "maximum 20 hours each time (4hrs*5 Wisdom)" pins level 4 at 5 slots. */
+    QUEUE_BY_LEVEL: [2, 3, 4, 5],
     BOOSTER_RESERVE: 0.15,    // held back for build/upgrade rushes and Finity Gear
     TARGET_BANK_DAYS: 0.5,    // at 10% decay, holding more than half a day's output is a tax
     ARMORY_KEEP: 3
@@ -508,7 +510,10 @@
     r.finishNow = Math.max(r.noxDaysNow, r.portalDaysRaw);
     r.finishAfter = Math.max(r.noxDaysAfter, r.portalDaysAfter);
     r.boundAfter = r.noxDaysAfter > r.portalDaysAfter ? "Nox" : "Throne";
-    r.queueRunway = C.QUEUE * C.TIERS[Math.min(i.throne, 4) - 1].hours;
+    var lvlIdx = Math.min(Math.max(i.throne, 1), 4) - 1;
+    r.queueSlots = C.QUEUE_BY_LEVEL[lvlIdx];
+    r.queueRunway = r.queueSlots * C.TIERS[lvlIdx].hours;
+    r.queueNext = i.throne < 4 ? C.QUEUE_BY_LEVEL[lvlIdx + 1] * C.TIERS[lvlIdx + 1].hours : null;
     r.ggDaysCover = i.gg / 2;
 
     /* Expiry clustering — only available from a v2 export. The whole settlement
@@ -682,9 +687,11 @@
         "the queue full — that is where iamthouth ended up, short of Experience with the Throne waiting.");
     }
 
-    push("medium", "Keep the Throne queue full — it holds " + C.QUEUE,
-      "That is " + r.queueRunway + " hours of runway at your current Throne level. Idle Throne time is the one loss no booster can buy back; " +
-      "fill it before bed and before work and you will essentially never stall.");
+    push("medium", "Keep the Throne queue full — at level " + i.throne + " it holds " + r.queueSlots,
+      "That is only <strong>" + r.queueRunway + " hours</strong> of runway — less than a night plus a working day — so any longer " +
+      "away and the Throne sits idle, which is the one loss no booster can buy back. Slots equal the Throne level plus one, so an " +
+      "upgrade buys slack as well as speed" +
+      (r.queueNext ? ": level " + (i.throne + 1) + " would give you " + r.queueNext + " hours" : ", though level 4 caps it at 20 hours") + ".");
 
     if (r.cluster >= 3) {
       var tight = r.clusterNox > r.clusterHave;
