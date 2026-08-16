@@ -373,11 +373,10 @@
     SANCT_PER_CYCLE: 110,
     SANCT_CYCLE_H: 6,
     SANCT_BASE_DAY: 440,
-    /* Neighbourly help adds 45% at Lighthouse 0 and 3% per Lighthouse level,
-       so +75% at LGN 10 and +150% at LGN 35 — measured in game, and the LGN-0
-       case reproduces iamthouth's 878/605 ratio exactly. */
-    HELP_BASE_PCT: 45,
-    LGN_PCT_PER_LEVEL: 3,
+    /* The Lighthouse bonus to neighbourly help rises steeply then flattens —
+       it is not linear. Measured anchors, interpolated in between; iamthouth's
+       878/605 (+45%) at his stated Lighthouse 5 corroborates the middle point. */
+    LGN_CURVE: [[0, 0], [1, 15], [5, 45], [10, 75], [35, 150]],
     LGN_MAX_LEVEL: 35,
     EE_MULT: 1.16,            // enchantment lift, still only inferred
     DECAY: 0.10,
@@ -394,7 +393,7 @@
   /* Build stamp — set to the commit whose content this file carries.
      Convention: content is committed first, then this line is updated in a
      follow-up commit, so the hash below names the change you are running. */
-  var BUILD = { hash: "f657917", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
+  var BUILD = { hash: "ec03e0f", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
 
   var $ = function (id) { return document.getElementById(id); };
   var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
@@ -413,7 +412,18 @@
     /* Ensorcelled Endowment rides on the neighbourly-help bonus — the Lighthouse
        scales what help delivers. An unhelped Sanctuary gains nothing from being
        enchanted, so the two multiply only when help is actually landing. */
-    r.helpPct = C.HELP_BASE_PCT + C.LGN_PCT_PER_LEVEL * Math.min(i.lgn, C.LGN_MAX_LEVEL);
+    r.helpPct = (function (L) {
+      L = Math.max(0, Math.min(L, C.LGN_MAX_LEVEL));
+      var c = C.LGN_CURVE;
+      for (var n = 0; n < c.length - 1; n++) {
+        if (L <= c[n + 1][0]) {
+          var x0 = c[n][0], y0 = c[n][1], x1 = c[n + 1][0], y1 = c[n + 1][1];
+          return Math.round(y0 + (y1 - y0) * (L - x0) / (x1 - x0));
+        }
+      }
+      return c[c.length - 1][1];
+    })(i.lgn);
+    r.helpExact = C.LGN_CURVE.some(function (pt) { return pt[0] === Math.min(i.lgn, C.LGN_MAX_LEVEL); });
     r.helpMult = 1 + r.helpPct / 100;
     r.perSanctBest = C.SANCT_BASE_DAY * r.helpMult;                 // helped + enchanted, measured
     r.perSanctHelpedBare = r.perSanctBest / C.EE_MULT;              // enchantment lift still inferred
@@ -987,8 +997,8 @@
         r.nHelpedBare + " helped only, " + r.nUnhelped + " neither)");
       mrow("One helped, enchanted Sanctuary yields", Math.round(r.perCycleBest) + " per " + C.SANCT_CYCLE_H +
         "-hour cycle (" + fmt(r.perSanctBest) + " / day if you never miss one)");
-      mrow("Neighbourly help bonus at Lighthouse " + i.lgn, "+" + r.helpPct + "% (45% base, +" +
-        C.LGN_PCT_PER_LEVEL + "% per Lighthouse level)");
+      mrow("Neighbourly help bonus at Lighthouse " + i.lgn, "+" + r.helpPct + "%" +
+        (r.helpExact ? " (measured)" : " (interpolated between measured levels 1, 5, 10 and 35)"));
       if (r.collectsPerDay) mrow("Implied collections per day", r.collectsPerDay.toFixed(1) + " of a possible " +
         (24 / C.SANCT_CYCLE_H) + ", from the gross Nox you entered");
     } else {
