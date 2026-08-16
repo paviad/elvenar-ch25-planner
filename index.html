@@ -384,7 +384,7 @@
   /* Build stamp — set to the commit whose content this file carries.
      Convention: content is committed first, then this line is updated in a
      follow-up commit, so the hash below names the change you are running. */
-  var BUILD = { hash: "b7ef26e", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
+  var BUILD = { hash: "ec03e0f", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
 
   var $ = function (id) { return document.getElementById(id); };
   var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
@@ -945,17 +945,29 @@
 
     h += '<div class="card"><h2>The arithmetic</h2><details open><summary>How these numbers were reached</summary><table><tbody>';
     var mrow = function (k, v) { h += '<tr><td>' + k + '</td><td class="n">' + v + '</td></tr>'; };
+    var TOT = IMPORTED && IMPORTED.totals ? IMPORTED.totals : null;
     mrow("Nox per building, placement to sale", fmt(C.NOX_CYCLE));
     mrow("Nox per building per day over its 9-day life", Math.round(C.NOX_PER_BLD_DAY));
-    mrow("Buildings to sell for the whole chapter", C.BUILDINGS_TOTAL);
-    mrow("Nox one Sanctuary yields in your city, per day", fmt(r.perSanct));
+    mrow("Buildings to sell for the whole chapter", C.BUILDINGS_TOTAL + " (" +
+      (TOT ? TOT.ch25_wisdom_life : 72) + " for research, " + (3 * C.WOL_PER_THRONE_UPGRADE) + " for the Throne upgrades)");
+    if (r.stateKnown) {
+      mrow("Your Sanctuaries produce now", fmt(r.sanctNoxNow) + " / day (" + r.nBoth + " helped and enchanted, " +
+        r.nHelpedBare + " helped only, " + r.nUnhelped + " neither)");
+      mrow("One helped, enchanted Sanctuary yields", fmt(r.perSanctBest) + " / day");
+    } else {
+      mrow("Nox one Sanctuary yields in your city, per day", fmt(r.perSanct));
+    }
     mrow("Nox from everything other than Sanctuaries", fmt(r.otherNox) + " / day");
-    mrow("Gross Nox after buying " + r.newSanct + " more", fmt(r.grossAfter) + " / day");
+    mrow("Gross Nox with every Sanctuary helped and enchanted" + (r.newSanct ? ", plus " + r.newSanct + " more bought" : ""),
+      fmt(r.grossAfter) + " / day");
     mrow("Lost to decay right now", fmt(r.decayNow) + " / day");
-    mrow("Portal items produced of 897", fmt(r.made));
-    mrow("Each Wisdom needed across the chapter", "299 Youth / 299 Adults / 299 Age");
-    if (r.gate) mrow("Next Throne gate", r.gate.need + " Wisdom of " + r.gate.label + " + " + fmt(r.gate.gear) + " Finity Gear");
-    if (r.phase) mrow("Wisdom mix to the next Throne level", r.phase.kid + " Youth / " + r.phase.adult + " Adults / " + r.phase.elder + " Age");
+    mrow("Portal items produced", fmt(r.made) + " of " + fmt(TOT
+      ? TOT.ch25_wisdom_kid + TOT.ch25_wisdom_adult + TOT.ch25_wisdom_elder : C.ITEMS_TOTAL));
+    mrow("Each Wisdom needed across the chapter", (TOT ? TOT.ch25_wisdom_kid : C.TYPE_TOTAL) + " Youth / " +
+      (TOT ? TOT.ch25_wisdom_adult : C.TYPE_TOTAL) + " Adults / " + (TOT ? TOT.ch25_wisdom_elder : C.TYPE_TOTAL) + " Age");
+    if (r.gate) mrow("Next Throne upgrade costs", r.gate.need + " Wisdom of " + r.gate.label + " + " + fmt(r.gate.gear) +
+      " Finity Gear for the research, then " + C.WOL_PER_THRONE_UPGRADE + " Wisdom of Life for the building");
+    if (r.phase && !r.open) mrow("Wisdom mix to the next Throne level", r.phase.kid + " Youth / " + r.phase.adult + " Adults / " + r.phase.elder + " Age");
     mrow("Throne production hours remaining", fmt(r.portalHoursRaw));
     mrow("Hours if the Throne never levelled again", fmt(r.hoursIfStuck));
     mrow("So the remaining Throne upgrades are worth", fmt(r.upgradesWorth) + " h");
