@@ -367,7 +367,12 @@
        research graph, so it has to be added back by Throne level. */
     WOL_PER_THRONE_UPGRADE: 10,
     SAPH_PER_SANCT: 120,
-    SANCT_BASE_DAY: 484,      // 605 per 30h collection, unenchanted, unhelped
+    /* Measured in game: a bare Sanctuary yields 110 Nox per 6-hour cycle, so
+       440/day IF collected every cycle. Fewer collections scale it down linearly —
+       that, and whether the Trader is set to Nox, are the only real variables. */
+    SANCT_PER_CYCLE: 110,
+    SANCT_CYCLE_H: 6,
+    SANCT_BASE_DAY: 440,
     HELP_MULT: 1.45,          // 878 vs 605 with neighbourly help
     LGN_MAX_MULT: 1.16,       // 1018 vs 878 at LGN 10 with the enchantment
     DECAY: 0.10,
@@ -384,7 +389,7 @@
   /* Build stamp — set to the commit whose content this file carries.
      Convention: content is committed first, then this line is updated in a
      follow-up commit, so the hash below names the change you are running. */
-  var BUILD = { hash: "bbe90ec", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
+  var BUILD = { hash: "ec03e0f", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
 
   var $ = function (id) { return document.getElementById(id); };
   var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
@@ -957,9 +962,12 @@
     if (r.stateKnown) {
       mrow("Your Sanctuaries produce now", fmt(r.sanctNoxNow) + " / day (" + r.nBoth + " helped and enchanted, " +
         r.nHelpedBare + " helped only, " + r.nUnhelped + " neither)");
-      mrow("One helped, enchanted Sanctuary yields", fmt(r.perSanctBest) + " / day" + (r.lgnClamped ? " (floor)" : ""));
+      mrow("One helped, enchanted Sanctuary yields", fmt(r.perSanctBest) + " / day" + (r.lgnClamped ? " (floor)" : "") +
+        ", i.e. " + Math.round(r.perSanctBest / (24 / C.SANCT_CYCLE_H)) + " per " + C.SANCT_CYCLE_H + "-hour cycle");
+      mrow("Daily Sanctuary figures assume", "collecting every " + C.SANCT_CYCLE_H + " hours; collect half as often and halve them");
     } else {
-      mrow("Nox one Sanctuary yields in your city, per day", fmt(r.perSanct));
+      mrow("Nox one Sanctuary yields in your city, per day", fmt(r.perSanct) +
+        " (bare rate is " + C.SANCT_PER_CYCLE + " per " + C.SANCT_CYCLE_H + "h)");
     }
     mrow("Nox from everything other than Sanctuaries", fmt(r.otherNox) + " / day");
     mrow("Gross Nox with every Sanctuary helped and enchanted" + (r.newSanct ? ", plus " + r.newSanct + " more bought" : ""),
