@@ -373,8 +373,13 @@
     SANCT_PER_CYCLE: 110,
     SANCT_CYCLE_H: 6,
     SANCT_BASE_DAY: 440,
-    HELP_MULT: 1.45,          // 878 vs 605 with neighbourly help
-    LGN_MAX_MULT: 1.16,       // 1018 vs 878 at LGN 10 with the enchantment
+    /* Neighbourly help adds 45% at Lighthouse 0 and 3% per Lighthouse level,
+       so +75% at LGN 10 and +150% at LGN 35 — measured in game, and the LGN-0
+       case reproduces iamthouth's 878/605 ratio exactly. */
+    HELP_BASE_PCT: 45,
+    LGN_PCT_PER_LEVEL: 3,
+    LGN_MAX_LEVEL: 35,
+    EE_MULT: 1.16,            // enchantment lift, still only inferred
     DECAY: 0.10,
     GG_BOOST: 0.20,
     GG_HOURS: 12,
@@ -389,7 +394,7 @@
   /* Build stamp — set to the commit whose content this file carries.
      Convention: content is committed first, then this line is updated in a
      follow-up commit, so the hash below names the change you are running. */
-  var BUILD = { hash: "e95f728", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
+  var BUILD = { hash: "ec03e0f", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
 
   var $ = function (id) { return document.getElementById(id); };
   var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
@@ -408,13 +413,12 @@
     /* Ensorcelled Endowment rides on the neighbourly-help bonus — the Lighthouse
        scales what help delivers. An unhelped Sanctuary gains nothing from being
        enchanted, so the two multiply only when help is actually landing. */
-    /* The only measured data point is iamthouth's 1,018 per Sanctuary at
-       Lighthouse 10, so the lift is clamped there. Above LGN 10 the real yield
-       is higher and everything Sanctuary-derived below is a FLOOR. */
-    r.lgnClamped = i.lgn > 10;
-    r.enchLift = (C.LGN_MAX_MULT - 1) * Math.min(i.lgn, 10) / 10;
-    r.perSanctBest = C.SANCT_BASE_DAY * C.HELP_MULT * (1 + r.enchLift);
-    r.enchPerSanct = C.SANCT_BASE_DAY * C.HELP_MULT * r.enchLift;
+    r.helpPct = C.HELP_BASE_PCT + C.LGN_PCT_PER_LEVEL * Math.min(i.lgn, C.LGN_MAX_LEVEL);
+    r.helpMult = 1 + r.helpPct / 100;
+    r.perSanctBest = C.SANCT_BASE_DAY * r.helpMult;                 // helped + enchanted, measured
+    r.perSanctHelpedBare = r.perSanctBest / C.EE_MULT;              // enchantment lift still inferred
+    r.enchPerSanct = r.perSanctBest - r.perSanctHelpedBare;
+    r.perCycleBest = r.perSanctBest / (24 / C.SANCT_CYCLE_H);
 
     /* With per-entity help and enchantment state we can price every Sanctuary
        individually; otherwise fall back to the two checkboxes for all of them. */
@@ -422,7 +426,7 @@
     r.stateKnown = st.length > 0;
     if (r.stateKnown) {
       r.sanctNoxNow = st.reduce(function (acc, x) {
-        return acc + C.SANCT_BASE_DAY * (x.helped ? C.HELP_MULT * (x.ench ? 1 + r.enchLift : 1) : 1);
+        return acc + (x.helped ? (x.ench ? r.perSanctBest : r.perSanctHelpedBare) : C.SANCT_BASE_DAY);
       }, 0);
       r.perSanct = r.perSanctBest;
       r.nHelped = st.filter(function (x) { return x.helped; }).length;
@@ -433,7 +437,7 @@
         return x.helped && x.ench && i.exportedAt && (x.enchUntil - i.exportedAt) < 86400;
       }).length;
     } else {
-      r.perSanct = C.SANCT_BASE_DAY * (i.help ? C.HELP_MULT * (i.ench ? 1 + r.enchLift : 1) : 1);
+      r.perSanct = i.help ? (i.ench ? r.perSanctBest : r.perSanctHelpedBare) : C.SANCT_BASE_DAY;
       r.sanctNoxNow = i.sanct * r.perSanct;
       if (!i.help) r.enchPerSanct = 0;
     }
@@ -596,6 +600,14 @@
                      .map(function (k) { return { label: k, n: want[k] }; });
     }
 
+    /* Sanctuaries are deterministic per collection, so the gap between the
+       full-collection figure and observed gross is collection frequency. */
+    if (r.stateKnown && i.noxDay > 0 && r.sanctNoxNow > 0) {
+      var full = 24 / C.SANCT_CYCLE_H;
+      r.collectsPerDay = Math.min(full, (i.noxDay / r.sanctNoxNow) * full);
+      r.missedNox = Math.max(0, r.sanctNoxNow - i.noxDay);
+    }
+
     r.sanctEnch = i.sanctEnch;
     r.sanctTotal = i.sanctTotal;
 
@@ -670,6 +682,17 @@
         "At level 4 there is no further Throne upgrade to chase and the portal is your only remaining wall, so settlement goods go to " +
         "it first and buildings get upgraded and sold at whatever pace the Nox allows. Both Dhurrin and Deborah finished holding " +
         "surplus Wisdom of Life, which is the usual shape of the endgame.");
+    }
+
+    if (r.missedNox > r.sanctNoxNow * 0.1) {
+      push(r.surplusIdle ? "low" : "medium",
+        fmt(r.missedNox) + " Nox a day is going uncollected",
+        "Sanctuaries produce " + Math.round(r.perCycleBest) + " every " + C.SANCT_CYCLE_H + " hours and stop until emptied, so " +
+        "your gross implies about <strong>" + r.collectsPerDay.toFixed(1) + " collections a day</strong> out of a possible " +
+        (24 / C.SANCT_CYCLE_H) + ". " + (r.surplusIdle
+          ? "Worth knowing rather than acting on: you are already producing more Nox than your settlement can absorb, so collecting "
+            + "more often changes nothing until you field more buildings."
+          : "Collecting on waking, midday and before bed captures most of it without living in the game."));
     }
 
     if (r.surplusIdle && i.fielded > 0) {
@@ -962,9 +985,12 @@
     if (r.stateKnown) {
       mrow("Your Sanctuaries produce now", fmt(r.sanctNoxNow) + " / day (" + r.nBoth + " helped and enchanted, " +
         r.nHelpedBare + " helped only, " + r.nUnhelped + " neither)");
-      mrow("One helped, enchanted Sanctuary yields", fmt(r.perSanctBest) + " / day" + (r.lgnClamped ? " (floor)" : "") +
-        ", i.e. " + Math.round(r.perSanctBest / (24 / C.SANCT_CYCLE_H)) + " per " + C.SANCT_CYCLE_H + "-hour cycle");
-      mrow("Daily Sanctuary figures assume", "collecting every " + C.SANCT_CYCLE_H + " hours; collect half as often and halve them");
+      mrow("One helped, enchanted Sanctuary yields", Math.round(r.perCycleBest) + " per " + C.SANCT_CYCLE_H +
+        "-hour cycle (" + fmt(r.perSanctBest) + " / day if you never miss one)");
+      mrow("Neighbourly help bonus at Lighthouse " + i.lgn, "+" + r.helpPct + "% (45% base, +" +
+        C.LGN_PCT_PER_LEVEL + "% per Lighthouse level)");
+      if (r.collectsPerDay) mrow("Implied collections per day", r.collectsPerDay.toFixed(1) + " of a possible " +
+        (24 / C.SANCT_CYCLE_H) + ", from the gross Nox you entered");
     } else {
       mrow("Nox one Sanctuary yields in your city, per day", fmt(r.perSanct) +
         " (bare rate is " + C.SANCT_PER_CYCLE + " per " + C.SANCT_CYCLE_H + "h)");
@@ -972,8 +998,6 @@
     mrow("Nox from everything other than Sanctuaries", fmt(r.otherNox) + " / day");
     mrow("Gross Nox with every Sanctuary helped and enchanted" + (r.newSanct ? ", plus " + r.newSanct + " more bought" : ""),
       fmt(r.grossAfter) + " / day");
-    if (r.lgnClamped) mrow("Sanctuary figures are a floor",
-      "measured at Lighthouse 10; yours is " + i.lgn + ", so real yield is higher");
     mrow("Lost to decay right now", fmt(r.decayNow) + " / day");
     mrow("Portal items produced", fmt(r.made) + " of " + fmt(TOT
       ? TOT.ch25_wisdom_kid + TOT.ch25_wisdom_adult + TOT.ch25_wisdom_elder : C.ITEMS_TOTAL));
