@@ -384,7 +384,7 @@
   /* Build stamp — set to the commit whose content this file carries.
      Convention: content is committed first, then this line is updated in a
      follow-up commit, so the hash below names the change you are running. */
-  var BUILD = { hash: "c6e0997", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
+  var BUILD = { hash: "ec03e0f", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
 
   var $ = function (id) { return document.getElementById(id); };
   var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
@@ -403,6 +403,10 @@
     /* Ensorcelled Endowment rides on the neighbourly-help bonus — the Lighthouse
        scales what help delivers. An unhelped Sanctuary gains nothing from being
        enchanted, so the two multiply only when help is actually landing. */
+    /* The only measured data point is iamthouth's 1,018 per Sanctuary at
+       Lighthouse 10, so the lift is clamped there. Above LGN 10 the real yield
+       is higher and everything Sanctuary-derived below is a FLOOR. */
+    r.lgnClamped = i.lgn > 10;
     r.enchLift = (C.LGN_MAX_MULT - 1) * Math.min(i.lgn, 10) / 10;
     r.perSanctBest = C.SANCT_BASE_DAY * C.HELP_MULT * (1 + r.enchLift);
     r.enchPerSanct = C.SANCT_BASE_DAY * C.HELP_MULT * r.enchLift;
@@ -953,13 +957,15 @@
     if (r.stateKnown) {
       mrow("Your Sanctuaries produce now", fmt(r.sanctNoxNow) + " / day (" + r.nBoth + " helped and enchanted, " +
         r.nHelpedBare + " helped only, " + r.nUnhelped + " neither)");
-      mrow("One helped, enchanted Sanctuary yields", fmt(r.perSanctBest) + " / day");
+      mrow("One helped, enchanted Sanctuary yields", fmt(r.perSanctBest) + " / day" + (r.lgnClamped ? " (floor)" : ""));
     } else {
       mrow("Nox one Sanctuary yields in your city, per day", fmt(r.perSanct));
     }
     mrow("Nox from everything other than Sanctuaries", fmt(r.otherNox) + " / day");
     mrow("Gross Nox with every Sanctuary helped and enchanted" + (r.newSanct ? ", plus " + r.newSanct + " more bought" : ""),
       fmt(r.grossAfter) + " / day");
+    if (r.lgnClamped) mrow("Sanctuary figures are a floor",
+      "measured at Lighthouse 10; yours is " + i.lgn + ", so real yield is higher");
     mrow("Lost to decay right now", fmt(r.decayNow) + " / day");
     mrow("Portal items produced", fmt(r.made) + " of " + fmt(TOT
       ? TOT.ch25_wisdom_kid + TOT.ch25_wisdom_adult + TOT.ch25_wisdom_elder : C.ITEMS_TOTAL));
