@@ -361,6 +361,11 @@
       { kid: 122, adult: 138, elder: 168 }
     ],
     WOL_FIRST_SINK: 3,        // First Workshops Upgrade is the first Wisdom of Life cost
+    /* Each Throne upgrade costs 10 Wisdom of Life for the BUILDING, on top of
+       the research. Dhurrin: 72 for the tech tree "plus 30 more to bring the
+       portal to lvl 4, or 102 buildings total". This spend is invisible in the
+       research graph, so it has to be added back by Throne level. */
+    WOL_PER_THRONE_UPGRADE: 10,
     SAPH_PER_SANCT: 120,
     SANCT_BASE_DAY: 484,      // 605 per 30h collection, unenchanted, unhelped
     HELP_MULT: 1.45,          // 878 vs 605 with neighbourly help
@@ -379,7 +384,7 @@
   /* Build stamp — set to the commit whose content this file carries.
      Convention: content is committed first, then this line is updated in a
      follow-up commit, so the hash below names the change you are running. */
-  var BUILD = { hash: "e0b4d88", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
+  var BUILD = { hash: "ec03e0f", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
 
   var $ = function (id) { return document.getElementById(id); };
   var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
@@ -627,8 +632,10 @@
             ? "Produce " + r.gateShort + " more Wisdom of " + r.gate.label + " to unlock the " + r.gate.name
             : "You can unlock the " + r.gate.name + " now",
           "That research is gated on <strong>" + r.gate.need + " Wisdom of " + r.gate.label +
-          "</strong> specifically — not on an aggregate, and not on Wisdom of Life. You hold " + r.gateHave +
-          ", plus it wants " + fmt(r.gate.gear) + " Finity Gear. This is a <em>target</em>, not necessarily what is blocking you " +
+          "</strong> specifically, not on an aggregate. You hold " + r.gateHave + ", and it also wants " + fmt(r.gate.gear) +
+          " Finity Gear. Then the <em>building</em> upgrade costs a further <strong>" + C.WOL_PER_THRONE_UPGRADE +
+          " Wisdom of Life</strong> on top of the research — that is the 30 beyond the tech tree's 72 that makes 102 buildings in all. " +
+          "This is a <em>target</em>, not necessarily what is blocking you " +
           "today — plenty of other research sits open in parallel, and this tool can't see your position in the tree. " +
           "But the Throne makes one Wisdom per cycle whatever type you pick, and you need 299 of each eventually, so choosing " +
           r.gate.label + " costs you nothing and pulls the upgrade forward. If a tech you can finish right now needs a " +
@@ -787,10 +794,11 @@
     }
 
     if (r.wolEarned < 10) {
-      push("low", "Wisdom of Life isn't what gates your Throne upgrades",
-        "The three Throne upgrades want 10 Youth, 20 Age and 30 Adults respectively. Wisdom of Life is spent elsewhere — " +
-        "the first call on it is the First Workshops Upgrade, at 3. So selling buildings early does not unlock the Throne, " +
-        "which is roughly the trap Dhurrin fell into when he burned 100–200 one-hour boosters racing to a tech he then couldn't use.");
+      push("low", "A Throne upgrade costs you twice",
+        "The research wants a specific Wisdom — 10 Youth, then 20 Age, then 30 Adults — and the building upgrade then wants " +
+        C.WOL_PER_THRONE_UPGRADE + " Wisdom of Life, which only comes from selling level 3 settlement buildings. Unlocking the " +
+        "research without the buildings sold leaves you stuck holding a tech you cannot use, which is what cost Dhurrin " +
+        "100–200 one-hour boosters.");
     }
 
     /* Stable sort by severity — findings discovered late (expiry clusters,
@@ -1147,10 +1155,14 @@
       var rs = f.techs.filter(function (t) { return t.state === "researched"; }).length;
       got.push("research graph — <strong>" + rs + "</strong> of " + f.techs.length + " techs done, <strong>" +
         f.frontier.length + "</strong> open, " + fmt(f.kpLeft) + " KP still to spend");
-      setField("wolSpent", U.ch25_wisdom_life);
+      var throneLvl = Math.min(4, Math.max(1, f.throne || 1));
+      var wolOnThrone = (throneLvl - 1) * C.WOL_PER_THRONE_UPGRADE;
+      setField("wolSpent", U.ch25_wisdom_life + wolOnThrone);
       setField("wspent", U.ch25_wisdom_kid + U.ch25_wisdom_adult + U.ch25_wisdom_elder);
-      got.push("spent so far — <strong>" + fmt(U.ch25_wisdom_life) + "</strong> Wisdom of Life and <strong>" +
-        fmt(U.ch25_wisdom_kid + U.ch25_wisdom_adult + U.ch25_wisdom_elder) + "</strong> Wisdoms, read from completed research");
+      got.push("spent so far — <strong>" + fmt(U.ch25_wisdom_life + wolOnThrone) + "</strong> Wisdom of Life (" +
+        fmt(U.ch25_wisdom_life) + " on research" + (wolOnThrone ? " plus " + wolOnThrone + " on Throne upgrades" : "") +
+        ") and <strong>" + fmt(U.ch25_wisdom_kid + U.ch25_wisdom_adult + U.ch25_wisdom_elder) +
+        "</strong> Wisdoms, read from completed research");
     }
 
     var wolStock = has(R.wisdom_of_life) ? R.wisdom_of_life
