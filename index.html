@@ -400,7 +400,7 @@
   /* Build stamp — set to the commit whose content this file carries.
      Convention: content is committed first, then this line is updated in a
      follow-up commit, so the hash below names the change you are running. */
-  var BUILD = { hash: "a218edd", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
+  var BUILD = { hash: "ec03e0f", date: "2026-08-14", repo: "https://github.com/paviad/elvenar-ch25-planner" };
 
   var $ = function (id) { return document.getElementById(id); };
   var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
@@ -482,6 +482,11 @@
 
     /* Nox runway to finish the chapter's buildings */
     r.wolEarned = i.wol + i.wolSpent;
+    /* Wisdom of Life has two sinks: research (72) and the Throne building
+       upgrades (10 each). Split what is left so it is clear where it goes. */
+    r.wolThroneLeft = Math.max(0, (4 - Math.min(Math.max(i.throne, 1), 4)) * C.WOL_PER_THRONE_UPGRADE);
+    r.wolResearchLeft = Math.max(0, (i.wolResearchTotal || 72) - (i.wolResearchUsed || 0));
+    r.wolLeft = Math.max(0, r.wolResearchLeft + r.wolThroneLeft - i.wol);
     r.bldLeft = Math.max(0, C.BUILDINGS_TOTAL - r.wolEarned);
     r.noxNeed = r.bldLeft * C.NOX_CYCLE;
     var fromBank = Math.min(i.noxStore, r.noxNeed);
@@ -949,8 +954,8 @@
          (r.netAfter > r.netNow ? '↑ ' + fmt(r.netAfter) + ' after the plan' : 'after decay') + '</div></div>';
     h += '<div class="tile"><div class="tl">Sustainable settlement</div><div class="tv">' + r.sustainAfter + '</div>' +
          '<div class="td">' + r.perTypeAfter + ' of each type</div></div>';
-    h += '<div class="tile"><div class="tl">Buildings to sell</div><div class="tv">' + r.bldLeft + '</div>' +
-         '<div class="td">' + fmt(r.noxNeed) + ' Nox needed</div></div>';
+    h += '<div class="tile"><div class="tl">Wisdom of Life to earn</div><div class="tv">' + r.bldLeft + '</div>' +
+         '<div class="td">' + r.bldLeft + ' more buildings sold · ' + fmt(r.noxNeed) + ' Nox</div></div>';
     h += '<div class="tile"><div class="tl">Throne hours left</div><div class="tv">' + fmt(r.portalHoursRaw) + '</div>' +
          '<div class="td">' + (r.gate
             ? (r.gateShort > 0 ? r.gateShort + " more " + r.gate.label + " to upgrade" : r.gate.label + " gate is clear")
@@ -988,8 +993,11 @@
     var TOT = IMPORTED && IMPORTED.totals ? IMPORTED.totals : null;
     mrow("Nox per building, placement to sale", fmt(C.NOX_CYCLE));
     mrow("Nox per building per day over its 9-day life", Math.round(C.NOX_PER_BLD_DAY));
-    mrow("Buildings to sell for the whole chapter", C.BUILDINGS_TOTAL + " (" +
+    mrow("Wisdom of Life for the whole chapter", C.BUILDINGS_TOTAL + " (" +
       (TOT ? TOT.ch25_wisdom_life : 72) + " for research, " + (3 * C.WOL_PER_THRONE_UPGRADE) + " for the Throne upgrades)");
+    mrow("Wisdom of Life you still need", r.wolLeft + " to earn — " + r.wolResearchLeft + " for research, " +
+      r.wolThroneLeft + " for the remaining Throne upgrade" + (r.wolThroneLeft === C.WOL_PER_THRONE_UPGRADE ? "" : "s") +
+      (i.wol > 0 ? ", less the " + i.wol + " you hold" : ""));
     if (r.stateKnown) {
       mrow("Your Sanctuaries produce now", fmt(r.sanctNoxNow) + " / day (" + r.nBoth + " helped and enchanted, " +
         r.nHelpedBare + " helped only, " + r.nUnhelped + " neither)");
@@ -1328,6 +1336,8 @@
       sanctEnch: IMPORTED && IMPORTED.enchKnown && IMPORTED.sanct > 0 ? IMPORTED.sanctEnch : undefined,
       sanctStates: IMPORTED && IMPORTED.helpKnown && IMPORTED.enchKnown ? IMPORTED.sanctStates : null,
       frontier: IMPORTED && IMPORTED.techs ? IMPORTED.frontier : null,
+      wolResearchTotal: IMPORTED && IMPORTED.totals ? IMPORTED.totals.ch25_wisdom_life : null,
+      wolResearchUsed: IMPORTED && IMPORTED.used ? IMPORTED.used.ch25_wisdom_life : null,
       kpLeft: IMPORTED && IMPORTED.techs ? IMPORTED.kpLeft : null,
       sanctTotal: IMPORTED ? IMPORTED.sanct : 0
     };
