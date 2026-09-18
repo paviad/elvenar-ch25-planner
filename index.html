@@ -235,6 +235,21 @@
       <div class="hint">Rough estimate is fine. 897 are needed in total.</div>
     </div>
   </div>
+  <div class="grid" style="margin-top:14px">
+    <div>
+      <label for="xk">Kids' Experience in stock</label>
+      <input type="number" id="xk" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="xa">Adults' Experience in stock</label>
+      <input type="number" id="xa" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="xe">Elders' Experience in stock</label>
+      <input type="number" id="xe" min="0" step="1" value="0">
+      <div class="hint">Optional, and not part of the export. Taken off the Experience you still have to make.</div>
+    </div>
+  </div>
 </div>
 
 <div class="card">
@@ -360,6 +375,18 @@
       { kid: 120, adult: 89,  elder: 60  },
       { kid: 122, adult: 138, elder: 168 }
     ],
+    /* What one exam costs at the Throne — read from the game's building config.
+       The recipe is the same at all four Throne levels; only the time changes.
+       Each Wisdom draws on its own Experience alone. `l3` is what a level 3
+       building's 9-hour production yields, for 350 Maturity and 20 Nox. */
+    EXAMS: [
+      { key: "ch25_wisdom_kid",   phase: "kid",   field: "wy", held: "xk", label: "Youth",  xpLabel: "Kids'",   xp: 1910, l3: 210 },
+      { key: "ch25_wisdom_adult", phase: "adult", field: "wa", held: "xa", label: "Adults", xpLabel: "Adults'", xp: 2500, l3: 280 },
+      { key: "ch25_wisdom_elder", phase: "elder", field: "wg", held: "xe", label: "Age",    xpLabel: "Elders'", xp: 3100, l3: 350 }
+    ],
+    GEAR_PER_EXAM: 25,
+    L3_MATURITY: 350,         // Maturity into one 9-hour level 3 production
+    L3_NOX: 20,               // and the Nox it burns
     WOL_FIRST_SINK: 3,        // First Workshops Upgrade is the first Wisdom of Life cost
     /* Each Throne upgrade costs 10 Wisdom of Life for the BUILDING, on top of
        the research. Dhurrin: 72 for the tech tree "plus 30 more to bring the
@@ -577,6 +604,30 @@
                  : (r.phase.elder >= r.phase.adult ? "Age" : "Adults");
       r.phaseTotal = pt;
     }
+
+    /* Experience still to make. With the research graph the count of each Wisdom
+       left is exact: what unresearched techs ask for, less what is in stock.
+       Without it only the total is known, so split that total in the proportions
+       the tree demands from this Throne level onward. */
+    r.xpExact = !!(i.wisdomTotals && i.wisdomUsed);
+    var ahead = C.EXAMS.map(function (x) {
+      var n = 0;
+      if (r.xpExact) n = i.wisdomTotals[x.key] - i.wisdomUsed[x.key];
+      else for (var L = Math.min(4, Math.max(1, i.throne)); L <= 4; L++) n += C.PHASE[L][x.phase];
+      return Math.max(0, n - i[x.field]);
+    });
+    var aheadSum = ahead.reduce(function (acc, n) { return acc + n; }, 0);
+    var scale = r.xpExact || !aheadSum ? 1 : Math.min(1, r.itemsLeft / aheadSum);
+    r.xpGear = 0; r.xpNox = 0; r.xpMaturity = 0;
+    r.xp = C.EXAMS.map(function (x, n) {
+      var make = Math.round(ahead[n] * scale);
+      var need = make * x.xp, held = i[x.held] || 0, left = Math.max(0, need - held);
+      var runs = Math.ceil(left / x.l3);
+      r.xpGear += make * C.GEAR_PER_EXAM;
+      r.xpNox += runs * C.L3_NOX;
+      r.xpMaturity += runs * C.L3_MATURITY;
+      return { label: x.label, xpLabel: x.xpLabel, cost: x.xp, make: make, need: need, held: held, left: left, runs: runs };
+    });
 
     /* With the real frontier we stop guessing: score each open tech by what
        the player is actually short of, nearest first. */
@@ -988,6 +1039,26 @@
     });
     h += '</ol></div>';
 
+    h += '<div class="card"><h2>Experience still to make</h2>';
+    h += '<div style="overflow-x:auto"><table><thead><tr><th>Wisdom</th><th class="n">Still to produce</th><th class="n">Experience each</th>' +
+         '<th class="n">Experience needed</th><th class="n">In stock</th><th class="n">Still to make</th>' +
+         '<th class="n">9h level 3 runs</th></tr></thead><tbody>';
+    r.xp.forEach(function (x) {
+      h += '<tr><td>' + x.label + ' — ' + x.xpLabel + ' Experience</td><td class="n">' + fmt(x.make) + '</td><td class="n">' +
+           fmt(x.cost) + '</td><td class="n">' + fmt(x.need) + '</td><td class="n">' + fmt(x.held) + '</td><td class="n"><strong>' +
+           fmt(x.left) + '</strong></td><td class="n">' + fmt(x.runs) + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    h += '<p class="hint" style="margin-top:10px">' + (r.xpExact
+           ? "Counts are exact — what your unresearched techs still ask for, less the Wisdoms you hold. "
+           : "Only your total is known here, so the split between the three is estimated from your Throne level — import a city export for exact counts. ") +
+         "Each Wisdom draws on its own Experience alone, and the cost is the same at every Throne level. Those exams also burn <strong>" +
+         fmt(r.xpGear) + "</strong> Finity Gear at " + C.GEAR_PER_EXAM + " apiece, on top of what the research itself costs. " +
+         "The runs column is 9-hour productions in a level 3 building; together they take about <strong>" + fmt(r.xpMaturity) +
+         "</strong> Maturity and <strong>" + fmt(r.xpNox) + "</strong> Nox — Nox the building-cycle budget above does not count. " +
+         "Elders' Experience costs the most per Wisdom but a Lyceum also makes the most per run, so every Wisdom comes to about " +
+         "nine runs whichever type it is.</p></div>";
+
     h += '<div class="card"><h2>The arithmetic</h2><details open><summary>How these numbers were reached</summary><table><tbody>';
     var mrow = function (k, v) { h += '<tr><td>' + k + '</td><td class="n">' + v + '</td></tr>'; };
     var TOT = IMPORTED && IMPORTED.totals ? IMPORTED.totals : null;
@@ -1327,6 +1398,9 @@
     var i = {
       quest: num("quest"), throne: parseInt($("throne").value, 10) || 1,
       wol: num("wol"), wolSpent: num("wolSpent"), wy: num("wy"), wa: num("wa"), wg: num("wg"), wspent: num("wspent"),
+      xk: num("xk"), xa: num("xa"), xe: num("xe"),
+      wisdomTotals: IMPORTED && IMPORTED.totals ? IMPORTED.totals : null,
+      wisdomUsed: IMPORTED && IMPORTED.used ? IMPORTED.used : null,
       noxStore: num("noxStore"), noxDay: num("noxDay"), sanct: num("sanct"), saph: num("saph"),
       lgn: num("lgn"), ench: $("ench").checked, help: $("help").checked,
       fielded: num("fielded"), arm: num("arm"), prosp: num("prosp"),
