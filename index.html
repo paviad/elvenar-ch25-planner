@@ -247,7 +247,7 @@
     <div>
       <label for="xe">Elders' Experience in stock</label>
       <input type="number" id="xe" min="0" step="1" value="0">
-      <div class="hint">Optional, and not part of the export. Taken off the Experience you still have to make.</div>
+      <div class="hint">Optional. Taken off the Experience you still have to make.</div>
     </div>
   </div>
 </div>
@@ -1063,7 +1063,8 @@
          r.bldLeft + " buildings you still have to sell are priced in too, assuming a third of each type. " +
          "The exams also burn <strong>" + fmt(r.xpGear) + "</strong> Finity Gear at " + C.GEAR_PER_EXAM + " apiece, on top of what the research itself costs. " +
          "Runs are 9-hour productions in a <em>level 2</em> building — level 3 is sold the moment it is reached, so level 2 is where all " +
-         "Experience is made. Together they take about <strong>" + fmt(r.xpGrowth) + "</strong> Growth and <strong>" + fmt(r.xpNox) +
+         "Experience is made. Together they take about <strong>" + fmt(r.xpGrowth) + "</strong> Growth" +
+         (i.growthHeld ? " (you hold " + fmt(i.growthHeld) + ")" : "") + " and <strong>" + fmt(r.xpNox) +
          "</strong> Nox — Nox the building-cycle budget above does not count. A pricier Experience also yields more per run, so an exam " +
          "comes to about nine runs whichever type it is, and a level 3 upgrade to about twenty.</p></div>";
 
@@ -1296,6 +1297,15 @@
       }
     } else { need("Wisdom of Youth in stock", "wy"); need("Wisdom of Adults in stock", "wa"); need("Wisdom of Age in stock", "wg"); }
 
+    /* Experience stock rides in the same block as the Wisdoms. */
+    var xpIn = [["experience_of_kids", "xk", "Kids'"], ["experience_of_adults", "xa", "Adults'"], ["experience_of_elders", "xe", "Elders'"]];
+    if (xpIn.some(function (x) { return has(R[x[0]]); })) {
+      xpIn.forEach(function (x) { setField(x[1], has(R[x[0]]) ? R[x[0]] : 0); });
+      got.push("Experience stock <strong>" + xpIn.map(function (x) { return has(R[x[0]]) ? fmt(R[x[0]]) : "0"; }).join(" / ") +
+        "</strong> (kids / adults / elders)" + (has(R.growth) ? ", <strong>" + fmt(R.growth) + "</strong> Growth" : "") +
+        (has(R.maturity) ? ", <strong>" + fmt(R.maturity) + "</strong> Maturity" : ""));
+    } else xpIn.forEach(function (x) { need(x[2] + " Experience in stock", x[1], "number", "optional"); });
+
     if (f.techs) {
       var U = f.used, TT = f.totals;
       var rs = f.techs.filter(function (t) { return t.state === "researched"; }).length;
@@ -1407,6 +1417,7 @@
       quest: num("quest"), throne: parseInt($("throne").value, 10) || 1,
       wol: num("wol"), wolSpent: num("wolSpent"), wy: num("wy"), wa: num("wa"), wg: num("wg"), wspent: num("wspent"),
       xk: num("xk"), xa: num("xa"), xe: num("xe"),
+      growthHeld: IMPORTED && has(IMPORTED.res.growth) ? IMPORTED.res.growth : 0,
       wisdomTotals: IMPORTED && IMPORTED.totals ? IMPORTED.totals : null,
       wisdomUsed: IMPORTED && IMPORTED.used ? IMPORTED.used : null,
       noxStore: num("noxStore"), noxDay: num("noxDay"), sanct: num("sanct"), saph: num("saph"),
