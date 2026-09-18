@@ -1208,6 +1208,14 @@
         if (t.state !== "researched") f.kpLeft += (has(t.kp_missing) ? t.kp_missing : 0);
         if (t.state === "available") f.frontier.push(t);
       });
+      /* A Throne above level 1 proves its upgrade techs were researched. A graph
+         showing nothing researched there has lost the city's progress, and taking
+         it at its word reads every Wisdom ever spent as zero. Keep the static
+         costs, drop the states. */
+      if (f.throne > 1 && !f.techs.some(function (t) { return t.state === "researched"; })) {
+        f.statesLost = true;
+        f.techs = null; f.used = null; f.frontier = null; f.kpLeft = null;
+      }
     }
 
     /* Boosters arrive as duration-in-hours → count. Sum to total hours. */
@@ -1250,7 +1258,7 @@
        a far better opening estimate than zero. */
     var lvl = Math.min(4, Math.max(1, f.throne || 1));
     var floorItems = [0, 0, 12, 200, 469][lvl] || 0;
-    var floorWol = lvl >= 2 ? 10 : 0;
+    var floorWol = (lvl - 1) * C.WOL_PER_THRONE_UPGRADE;
     var floorNote = lvl >= 2 ? "seeded with the minimum your Throne level implies — raise it if you have spent more" : "the export only reports what you are holding";
     var need = function (label, field, type, hint) { miss.push({ label: label, field: field, type: type || "number", hint: hint }); };
     var note = function (label) { miss.push({ label: label }); };
@@ -1306,6 +1314,9 @@
         (has(R.maturity) ? ", <strong>" + fmt(R.maturity) + "</strong> Maturity" : ""));
     } else xpIn.forEach(function (x) { need(x[2] + " Experience in stock", x[1], "number", "optional"); });
 
+    if (f.statesLost) note("Research progress — the export marks every technology as locked, which cannot be right with the Throne at level " +
+      f.throne + ". Spent figures fall back to the minimum your Throne level implies; re-export once the game has sent your research");
+
     if (f.techs) {
       var U = f.used, TT = f.totals;
       var rs = f.techs.filter(function (t) { return t.state === "researched"; }).length;
@@ -1332,7 +1343,7 @@
         setField("wolSpent", P.wisdom_of_life_earned - wolStock);
         got.push("<strong>" + fmt(P.wisdom_of_life_earned) + "</strong> earned in total of 102");
       } else if (!f.techs) {
-        if (floorWol > wolStock) setField("wolSpent", floorWol - wolStock);
+        if (floorWol > 0) setField("wolSpent", floorWol);
         need("Wisdom of Life already spent on research", "wolSpent", "number", floorNote);
       }
     } else { need("Wisdom of Life in stock", "wol"); need("Wisdom of Life already spent on research", "wolSpent"); }
